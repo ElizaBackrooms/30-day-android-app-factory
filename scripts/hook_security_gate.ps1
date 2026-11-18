@@ -36,8 +36,9 @@ try {
     }
 
     if ($toolName -eq "run_command" -and -not [string]::IsNullOrWhiteSpace($cmdLine)) {
-        # Block force-adding gitignored files regardless of git flags or target ordering
-        if ($cmdLine -match '(?i)(?<![A-Za-z0-9_.-])git(\.exe)?(?:\s+(?:-C\s+\S+|-c\s+\S+|-[A-Za-z]+|--[A-Za-z-]+(?:=\S+)?))*\s+add\b' -and
+        # Block force-adding gitignored files regardless of git flags, quoted -C paths, or target ordering
+        $gitPrefixRegex = '(?i)(?<![A-Za-z0-9_.-])git(\.exe)?(?:\s+(?:-C\s+(?:"[^"]+"|\S+)|-c\s+(?:"[^"]+"|\S+)|-[A-Za-z]+|--[A-Za-z-]+(?:=(?:"[^"]+"|\S+))?))*'
+        if ($cmdLine -match "${gitPrefixRegex}\s+add\b" -and
             $cmdLine -match '(?i)(\s-[A-Za-z]*f[A-Za-z]*\b|\s--force\b)') {
             Write-Deny "Security Overseer Hook blocked 'git add -f/--force' to protect gitignored secrets and .private files."
         }
@@ -49,7 +50,7 @@ try {
         }
 
         # Always run security_audit.ps1 before any direct git commit or git push command (including git -C ... / git.exe)
-        if ($cmdLine -match '(?i)(?<![A-Za-z0-9_.-])git(\.exe)?(?:\s+(?:-C\s+\S+|-c\s+\S+|-[A-Za-z]+|--[A-Za-z-]+(?:=\S+)?))*\s+(commit|push)\b') {
+        if ($cmdLine -match "${gitPrefixRegex}\s+(commit|push)\b") {
             $auditScript = Join-Path $PSScriptRoot "security_audit.ps1"
             $prevEAP = $ErrorActionPreference
             $ErrorActionPreference = "Continue"
