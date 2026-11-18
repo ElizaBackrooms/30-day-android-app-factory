@@ -11,44 +11,88 @@ permissions:
 
 jobs:
   security-audit:
-    name: Secret, OpSec & Manifest Security Audit
+    name: Secret, OpSec & Android AppSec Audit
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Scan for leaked secrets, private URLs, keystores, and cleartext traffic
+      - name: Scan for leaked secrets, private URLs, keystores, and Android AppSec risks
         shell: bash
         run: |
           set -euo pipefail
           FAIL=0
 
-          # 1. Check for forbidden credential/keystore filenames
-          BAD_FILES=$(git ls-files | grep -E '\.(jks|keystore|p12|pfx|key|pem)$|(^|/)(local\.properties|keystore\.properties|\.env(\..*)?|google-services\.json)$' || true)
+          # 1. Check for forbidden private folders, credential files, or keystores (case-insensitive)
+          BAD_FILES=$(git ls-files | grep -iE '(^|/)\.private/|\.(jks|keystore|p12|pfx|key|pem|ppk|cer|crt|der|mobileprovision|secret)$|(^|/)(local\.properties|keystore\.properties|signing\.properties|secrets\.properties|credentials\.json|\.env(\..*)?|google-services\.json|GoogleService-Info\.plist|local_studio_urls\.json|id_rsa.*|id_ed25519.*|.*service-account.*\.json|.*firebase-adminsdk.*\.json)$' || true)
           if [ -n "$BAD_FILES" ]; then
-            echo "::error::Forbidden credential/keystore/env files committed:"
+            echo "::error::Forbidden private/credential/keystore/env files committed:"
             echo "$BAD_FILES"
             FAIL=1
           fi
 
-          # 2. Scan tracked text files for leaked tokens, private keys, or studio URLs
-          SECRET_PAT="(ghp_[0-9A-Za-z_]{20,}|gho_[0-9A-Za-z_]{20,}|github_pat_[0-9A-Za-z_]{20,}|AIza[0-9A-Za-z_-]{35}|sk-[0-9A-Za-z]{20,}|-----BEGIN [A-Z ]+PRIVATE KEY-----|aistudio\.google\.com/apps/)"
-          if git grep -nI -E "$SECRET_PAT" -- . ':!.github/workflows/security-and-android-ci.yml' ':!scripts/publish_to_github.ps1'; then
+          # 2. Scan tracked text files for leaked tokens, private keys, user paths, or studio URLs
+          SECRET_PAT="(ghp_[0-9A-Za-z_]{20,}|gho_[0-9A-Za-z_]{20,}|github_pat_[0-9A-Za-z_]{20,}|AIza[0-9A-Za-z_-]{35}|sk[_-][0-9A-Za-z_-]{20,}|AKIA[0-9A-Z]{16}|xox[baprs]-[0-9A-Za-z-]{10,}|GOCSPX-[0-9A-Za-z_-]{20,}|-----BEGIN ([A-Z0-9 ]+ )?PRIVATE KEY-----|aistudio[.]google[.]com/apps/)"
+          if git grep -nI -E "$SECRET_PAT" -- . ':!.github/workflows/security-and-android-ci.yml'; then
             echo "::error::Potential secret, private key, or private AI Studio URL detected!"
             FAIL=1
           fi
 
-          # 3. Verify no AndroidManifest enables cleartext HTTP traffic
-          CLEARTEXT_PAT='usesCleartextTraffic[[:space:]]*=[[:space:]]*"true"'
-          if git grep -nI -E "$CLEARTEXT_PAT" -- '*.xml'; then
-            echo "::error::AndroidManifest.xml must not enable usesCleartextTraffic=\"true\"!"
+          USER_PATH_PAT='([A-Za-z]:(\\\\|\\|/)'"Users"'(\\\\|\\|/)|/'"Users"'/|/'"home"'/)[^[:space:]"'\''`]+'
+          if git grep -nI -E "$USER_PATH_PAT" -- . ':!.github/workflows/security-and-android-ci.yml'; then
+            echo "::error::Local user home directory path detected in tracked files!"
             FAIL=1
           fi
+
+          # 3. Verify AndroidManifest / Gradle / Network Security Config hardening
+          CLEARTEXT_PAT='usesCleartextTraffic[[:space:]]*=[[:space:]]*"true"'
+          if git grep -nI -E "$CLEARTEXT_PAT" -- '*.xml' '*.gradle' '*.kts'; then
+            echo "::error::AndroidManifest or Gradle must not enable usesCleartextTraffic=\"true\"!"
+            FAIL=1
+          fi
+
+          BACKUP_PAT='android:allowBackup[[:space:]]*=[[:space:]]*"true"'
+          if git grep -nI -E "$BACKUP_PAT" -- 'days/**/AndroidManifest.xml'; then
+            echo "::error::AndroidManifest.xml must set android:allowBackup=\"false\"!"
+            FAIL=1
+          fi
+
+          NET_CFG_PAT='cleartextTrafficPermitted[[:space:]]*=[[:space:]]*"true"'
+          if git grep -nI -E "$NET_CFG_PAT" -- 'days/**/*.xml'; then
+            echo "::error::Network security config must not enable cleartextTrafficPermitted=\"true\"!"
+            FAIL=1
+          fi
+
+          while IFS= read -r -d '' manifest; do
+            if ! grep -q 'android:usesCleartextTraffic="false"' "$manifest"; then
+              echo "::error::${manifest} must explicitly set android:usesCleartextTraffic=\"false\"!"
+              FAIL=1
+            fi
+            if ! grep -q 'android:allowBackup="false"' "$manifest"; then
+              echo "::error::${manifest} must explicitly set android:allowBackup=\"false\"!"
+              FAIL=1
+            fi
+          done < <(find days -path 'days/*/android_project/**/AndroidManifest.xml' -print0 2>/dev/null || true)
+
+          # 4. Scan Android source files for insecure TLS bypasses, open sockets, cleartext HTTP, or exec sinks
+          DANGER_PAT='(AllowAllHostnameVerifier|SSLSocketFactory\.ALLOW_ALL|TrustAll|Runtime\.getRuntime\(\)\.exec|ProcessBuilder[[:space:]]*\(|addJavascriptInterface[[:space:]]*\(|evaluateJavascript[[:space:]]*\(|setJavaScriptEnabled[[:space:]]*\([[:space:]]*true[[:space:]]*\)|DexClassLoader[[:space:]]*\(|PathClassLoader[[:space:]]*\(|InMemoryDexClassLoader[[:space:]]*\(|ServerSocket[[:space:]]*\(|ServerSocketChannel\.open|DatagramSocket[[:space:]]*\(|AsynchronousServerSocketChannel\.open|LocalServerSocket[[:space:]]*\()'
+          if git grep -nI -E "$DANGER_PAT" -- 'days/*/android_project/*.kt' 'days/*/android_project/**/*.kt' 'days/*/android_project/*.java' 'days/*/android_project/**/*.java'; then
+            echo "::error::Dangerous TLS bypass, command execution, WebView bridge, or inbound socket detected in Android code!"
+            FAIL=1
+          fi
+
+          HTTP_URL_PAT='http://(schemas\.android\.com/|www\.w3\.org/|ns\.adobe\.com/|schemas\.xmlsoap\.org/|apache\.org/|gradle\.org/|maven\.apache\.org/)'
+          while IFS= read -r -d '' srcfile; do
+            if grep -nE 'http://[^[:space:]"'\''`>]+' "$srcfile" | grep -vE "$HTTP_URL_PAT"; then
+              echo "::error::Unencrypted http:// URL detected in ${srcfile} (HTTPS required)!"
+              FAIL=1
+            fi
+          done < <(find days -path 'days/*/android_project/*' \( -name '*.kt' -o -name '*.java' \) -print0 2>/dev/null || true)
 
           if [ "$FAIL" -ne 0 ]; then
             exit 1
           fi
-          echo "Security audit passed cleanly."
+          echo "Security & AppSec audit passed cleanly."
 
   build-android-apps:
     name: Build Android Debug APKs
@@ -62,15 +106,12 @@ jobs:
         id: discover
         shell: bash
         run: |
-          PROJECTS=$(find days -maxdepth 3 -path 'days/*/android_project/build.gradle*' -exec dirname {} \; | sort -u || true)
-          if [ -z "$PROJECTS" ]; then
+          COUNT=$(find days -maxdepth 3 -path 'days/*/android_project/build.gradle*' 2>/dev/null | wc -l | tr -d ' ')
+          if [ "$COUNT" -eq 0 ]; then
             echo "has_projects=false" >> "$GITHUB_OUTPUT"
             echo "No android_project directories found yet; skipping Gradle build."
           else
             echo "has_projects=true" >> "$GITHUB_OUTPUT"
-            echo "projects<<EOF" >> "$GITHUB_OUTPUT"
-            echo "$PROJECTS" >> "$GITHUB_OUTPUT"
-            echo "EOF" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Set up JDK 17
@@ -90,8 +131,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p artifacts_out
-          while IFS= read -r proj; do
-            [ -z "$proj" ] && continue
+          while IFS= read -r -d '' proj; do
             day_name=$(basename "$(dirname "$proj")")
             echo "Building $day_name ($proj)..."
             pushd "$proj" >/dev/null
@@ -102,8 +142,15 @@ jobs:
               gradle assembleDebug --no-daemon
             fi
             popd >/dev/null
-            find "$proj" -name "*-debug.apk" -exec cp {} "artifacts_out/${day_name}-debug.apk" \;
-          done <<< "${{ steps.discover.outputs.projects }}"
+            while IFS= read -r -d '' apk; do
+              cp "$apk" "artifacts_out/${day_name}-$(basename "$apk")"
+            done < <(find "$proj" -name "*-debug.apk" -print0)
+          done < <(find days -maxdepth 3 -path 'days/*/android_project/build.gradle*' -exec dirname {} \; | sort -u | tr '\n' '\0')
+
+          if [ -z "$(ls -A artifacts_out)" ]; then
+            echo "::error::Android projects were discovered, but no debug APK artifacts were produced."
+            exit 1
+          fi
 
       - name: Upload APK Artifacts
         if: steps.discover.outputs.has_projects == 'true'
@@ -111,4 +158,4 @@ jobs:
         with:
           name: daily-android-debug-apks
           path: artifacts_out/*.apk
-          if-no-files-found: warn
+          if-no-files-found: error

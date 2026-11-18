@@ -1,0 +1,16 @@
+{
+  "security-overseer-gate": {
+    "PreToolUse": [
+      {
+        "matcher": "run_command",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"& { $p = if (Test-Path 'scripts/hook_security_gate.ps1') { 'scripts/hook_security_gate.ps1' } else { '../scripts/hook_security_gate.ps1' }; & $p }\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,19 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "security"
+      - "dependencies"
+
+  - package-ecosystem: "gradle"
+    directories:
+      - "/days/*/android_project"
+      - "/days/*/android_project/app"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "security"
+      - "dependencies"

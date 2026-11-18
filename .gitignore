@@ -1,20 +1,33 @@
 # Private local session URLs and local-only configs
 .private/
+local_studio_urls.json
 
-# Keystores, signing configs, and secrets
+# Keystores, signing configs, certificates, and credentials
 *.jks
 *.keystore
 *.p12
 *.pfx
 *.key
 *.pem
+*.ppk
+*.cer
+*.crt
+*.der
+*.mobileprovision
+id_rsa*
+id_ed25519*
 keystore.properties
+signing.properties
 local.properties
+secrets.properties
+*.secret
+credentials.json
+*service-account*.json
+*firebase-adminsdk*.json
 .env
 .env.*
-*secret*
-*credentials*
 google-services.json
+GoogleService-Info.plist
 
 # Android / Gradle / IDE build outputs
 .gradle/

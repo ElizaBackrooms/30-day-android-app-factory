@@ -1,0 +1,100 @@
+name: CodeQL Security Analysis
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '30 6 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  discover-sources:
+    name: Discover Analysable Sources
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      has_kotlin_java: ${{ steps.scan.outputs.has_kotlin_java }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: scan
+        shell: bash
+        run: |
+          SRC=$(find days -path 'days/*/android_project/*' \( -name '*.kt' -o -name '*.java' \) 2>/dev/null | head -n 1 || true)
+          if [ -n "$SRC" ]; then
+            echo "has_kotlin_java=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_kotlin_java=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  analyze-actions:
+    name: CodeQL (GitHub Actions)
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: actions
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:actions"
+
+  analyze-android:
+    name: CodeQL (Kotlin / Java)
+    needs: discover-sources
+    if: needs.discover-sources.outputs.has_kotlin_java == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: java-kotlin
+          build-mode: manual
+
+      - name: Build Android Projects for CodeQL Extraction
+        shell: bash
+        run: |
+          set -euo pipefail
+          find days -maxdepth 3 -path 'days/*/android_project/build.gradle*' -exec dirname {} \; | sort -u | while IFS= read -r proj; do
+            [ -z "$proj" ] && continue
+            echo "CodeQL manual build: $proj"
+            pushd "$proj" >/dev/null
+            if [ -f "./gradlew" ]; then
+              chmod +x ./gradlew
+              ./gradlew assembleDebug --no-daemon
+            else
+              gradle assembleDebug --no-daemon
+            fi
+            popd >/dev/null
+          done
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:java-kotlin"

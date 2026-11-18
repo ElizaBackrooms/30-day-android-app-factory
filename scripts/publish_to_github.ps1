@@ -81,13 +81,38 @@ if ($ResolvedDayFolder -and (Test-Path $ResolvedDayFolder)) {
                 continue
             }
 
-            if ($isAndroidBundle -and ($nameMatchesSlug -or $DayFolder -ne "")) {
+            if ($isAndroidBundle -and $nameMatchesSlug) {
                 $targetProjectDir = Join-Path $ResolvedDayFolder "android_project"
                 $tempExtractDir = Join-Path $RepoRoot ".private\tmp_extract_$([Guid]::NewGuid().ToString('N'))"
                 New-Item -ItemType Directory -Path $tempExtractDir -Force | Out-Null
 
                 try {
-                    [System.IO.Compression.ZipFile]::ExtractToDirectory($zip.FullName, $tempExtractDir)
+                    $tempRootFull = [System.IO.Path]::GetFullPath($tempExtractDir)
+                    if (-not $tempRootFull.EndsWith([System.IO.Path]::DirectorySeparatorChar)) {
+                        $tempRootFull += [System.IO.Path]::DirectorySeparatorChar
+                    }
+
+                    # Safe Zip extraction with Zip Slip path-traversal protection
+                    $zipArchive = [System.IO.Compression.ZipFile]::OpenRead($zip.FullName)
+                    try {
+                        foreach ($entry in $zipArchive.Entries) {
+                            $destPath = [System.IO.Path]::GetFullPath((Join-Path $tempExtractDir $entry.FullName))
+                            if (-not $destPath.StartsWith($tempRootFull, [System.StringComparison]::OrdinalIgnoreCase)) {
+                                throw "Blocked unsafe Zip Slip path traversal entry '$($entry.FullName)' in '$($zip.Name)'."
+                            }
+                            if ([string]::IsNullOrEmpty($entry.Name)) {
+                                New-Item -ItemType Directory -Path $destPath -Force | Out-Null
+                            } else {
+                                $destParent = Split-Path -Parent $destPath
+                                if (-not (Test-Path $destParent)) {
+                                    New-Item -ItemType Directory -Path $destParent -Force | Out-Null
+                                }
+                                [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $destPath, $true)
+                            }
+                        }
+                    } finally {
+                        $zipArchive.Dispose()
+                    }
 
                     $extractedTopDirs = Get-ChildItem -Path $tempExtractDir -Directory
                     $extractedTopFiles = Get-ChildItem -Path $tempExtractDir -File
@@ -102,18 +127,31 @@ if ($ResolvedDayFolder -and (Test-Path $ResolvedDayFolder)) {
                     New-Item -ItemType Directory -Path $targetProjectDir -Force | Out-Null
                     Copy-Item -Path (Join-Path $sourceRoot "*") -Destination $targetProjectDir -Recurse -Force
 
-                    # Remove local/build artifacts that must never enter git
+                    # Remove local/build/credential artifacts that must never enter git
+                    $blockedNames = @(
+                        "local.properties", "keystore.properties", "signing.properties", "secrets.properties",
+                        "credentials.json", "google-services.json", "GoogleService-Info.plist",
+                        ".env", ".DS_Store", "Thumbs.db", "desktop.ini"
+                    )
+                    $blockedExts = @(".jks", ".keystore", ".p12", ".pfx", ".key", ".pem", ".ppk", ".cer", ".crt", ".der", ".mobileprovision", ".secret")
+
                     Get-ChildItem -Path $targetProjectDir -Recurse -Force -ErrorAction SilentlyContinue |
                         Where-Object {
-                            $_.Name -in @("local.properties", "keystore.properties", ".DS_Store", "Thumbs.db") -or
-                            $_.Extension -in @(".jks", ".keystore", ".p12", ".pfx", ".key", ".pem")
+                            $_.Name -in $blockedNames -or
+                            $_.Extension.ToLowerInvariant() -in $blockedExts -or
+                            $_.Name -like ".env.*" -or
+                            $_.Name -like "id_rsa*" -or
+                            $_.Name -like "id_ed25519*" -or
+                            $_.Name -like "*service-account*.json" -or
+                            $_.Name -like "*firebase-adminsdk*.json"
                         } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 
-                    # Scrub any Windows/macOS user paths inside extracted text files
+                    # Scrub Windows/macOS/Linux home directory paths inside extracted text files (UTF-8 without BOM)
                     $textExtensions = @(".kt", ".kts", ".java", ".xml", ".gradle", ".properties", ".md", ".txt", ".json", ".pro", ".yml", ".yaml")
-                    $userPattern = [regex]::Escape($env:USERNAME)
-                    $winPathPattern = '[A-Za-z]:\\' + 'Users\\' + '[^\\\s"''`]+'
-                    $macPathPattern = '/' + 'Users/' + '[^/\s"''`]+'
+                    $winPathPattern = '[A-Za-z]:(?:\\\\|\\|/)Users(?:\\\\|\\|/)[^\s"''`]+'
+                    $macPathPattern = '/' + 'Users/' + '[^\s"''`]+'
+                    $linuxPathPattern = '/' + 'home/' + '[^\s"''`]+'
+                    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 
                     Get-ChildItem -Path $targetProjectDir -Recurse -File -ErrorAction SilentlyContinue |
                         Where-Object { $textExtensions -contains $_.Extension.ToLowerInvariant() } |
@@ -122,11 +160,9 @@ if ($ResolvedDayFolder -and (Test-Path $ResolvedDayFolder)) {
                             if ($null -ne $raw) {
                                 $sanitized = $raw -replace $winPathPattern, '<USER_HOME>'
                                 $sanitized = $sanitized -replace $macPathPattern, '<USER_HOME>'
-                                if ($env:USERNAME.Length -ge 3) {
-                                    $sanitized = [regex]::Replace($sanitized, "\b$userPattern\b", 'developer', [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
-                                }
+                                $sanitized = $sanitized -replace $linuxPathPattern, '<USER_HOME>'
                                 if ($sanitized -ne $raw) {
-                                    Set-Content -Path $_.FullName -Value $sanitized -NoNewline -Encoding UTF8
+                                    [System.IO.File]::WriteAllText($_.FullName, $sanitized, $utf8NoBom)
                                 }
                             }
                         }
@@ -143,91 +179,41 @@ if ($ResolvedDayFolder -and (Test-Path $ResolvedDayFolder)) {
     }
 }
 
-# 3. Security & PII Audit Gate across all tracked + untracked non-ignored files
-$candidateFiles = & git -C $RepoRoot ls-files --cached --others --exclude-standard
+# 3. Run shared Security & OpSec Audit Gate
+$auditScript = Join-Path $PSScriptRoot "security_audit.ps1"
+& $auditScript
 if ($LASTEXITCODE -ne 0) {
-    throw "Failed to enumerate repository files via git ls-files."
-}
-
-$forbiddenExtensions = @(".jks", ".keystore", ".p12", ".pfx", ".key", ".pem")
-$forbiddenNames = @("local.properties", "keystore.properties", ".env", "google-services.json")
-$binaryExtensions = @(".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".ttf", ".otf", ".jar", ".so", ".zip", ".apk", ".aab", ".woff", ".woff2")
-
-$winUserPathRegex = '[A-Za-z]:\\' + 'Users\\' + '[^\\\s"''`]+'
-$macUserPathRegex = '/' + 'Users/' + '[^/\s"''`]+'
-$studioUrlRegex = 'aistudio\.google\.com' + '/apps/'
-$secretRegex = '(ghp_' + '[0-9A-Za-z_]{20,}|gho_' + '[0-9A-Za-z_]{20,}|github_pat_' + '[0-9A-Za-z_]{20,}|AIza[0-9A-Za-z\-_]{35}|sk-[0-9A-Za-z]{20,}|' + '-----BEGIN [A-Z ]+PRIVATE KEY' + '-----)'
-$cleartextRegex = 'usesCleartextTraffic\s*=\s*"' + 'true"'
-$usernameRegex = if ($env:USERNAME.Length -ge 3) { "(?<![A-Za-z0-9_])$([regex]::Escape($env:USERNAME))(?![A-Za-z0-9_])" } else { "" }
-
-$violations = New-Object System.Collections.Generic.List[string]
-
-foreach ($relPath in $candidateFiles) {
-    if ([string]::IsNullOrWhiteSpace($relPath)) { continue }
-    $fullPath = Join-Path $RepoRoot $relPath
-    if (-not (Test-Path $fullPath -PathType Leaf)) { continue }
-
-    $fileName = [System.IO.Path]::GetFileName($fullPath)
-    $ext = [System.IO.Path]::GetExtension($fullPath).ToLowerInvariant()
-
-    if ($forbiddenExtensions -contains $ext -or $forbiddenNames -contains $fileName -or $fileName -like ".env.*") {
-        $violations.Add("${relPath}: Forbidden credential/keystore/env file detected.")
-        continue
-    }
-
-    if ($binaryExtensions -contains $ext) { continue }
-
-    $lines = Get-Content -Path $fullPath -ErrorAction SilentlyContinue
-    if ($null -eq $lines) { continue }
-
-    $lineNum = 0
-    foreach ($line in $lines) {
-        $lineNum++
-        if ($line -match $winUserPathRegex) {
-            $violations.Add("${relPath}:${lineNum}: Windows user directory path exposed.")
-        }
-        if ($line -match $macUserPathRegex) {
-            $violations.Add("${relPath}:${lineNum}: macOS user directory path exposed.")
-        }
-        if ($line -match $studioUrlRegex) {
-            $violations.Add("${relPath}:${lineNum}: Private Google AI Studio URL exposed.")
-        }
-        if ($line -match $secretRegex) {
-            $violations.Add("${relPath}:${lineNum}: Potential API token or private key detected.")
-        }
-        if (($ext -in @(".xml", ".gradle", ".kts")) -and ($line -match $cleartextRegex)) {
-            $violations.Add("${relPath}:${lineNum}: Insecure AndroidManifest usesCleartextTraffic=true detected.")
-        }
-        if ($usernameRegex -ne "" -and ([regex]::IsMatch($line, $usernameRegex, [System.Text.RegularExpressions.RegexOptions]::IgnoreCase))) {
-            $violations.Add("${relPath}:${lineNum}: Local OS username detected.")
-        }
-    }
-}
-
-if ($violations.Count -gt 0) {
-    Write-Error ("Security audit FAILED with $($violations.Count) violation(s):`n - " + ($violations -join "`n - "))
     exit 1
 }
 
-Write-Host "[OK] Security & OpSec audit passed across $($candidateFiles.Count) file(s)."
-
-# 4. Enforce safe public Git author identity
+# 4. Enforce safe public Git author identity and verify ElizaBackrooms GitHub CLI account
 Invoke-GitChecked @("config", "user.name", "ElizaBackrooms") | Out-Null
 Invoke-GitChecked @("config", "user.email", "ElizaBackrooms@users.noreply.github.com") | Out-Null
 
-# Ensure gh CLI active account is ElizaBackrooms if gh is installed
 if (Get-Command gh -ErrorAction SilentlyContinue) {
     $prevEAP = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
-    try {
-        & gh auth switch --user ElizaBackrooms 2>$null | Out-Null
-    } finally {
-        $ErrorActionPreference = $prevEAP
+    $switchOut = & gh auth switch --user ElizaBackrooms 2>&1
+    $switchCode = $LASTEXITCODE
+    $ErrorActionPreference = $prevEAP
+    if ($switchCode -ne 0) {
+        throw "Failed to switch active gh account to ElizaBackrooms: $($switchOut -join "`n")"
     }
 }
 
-# 5. Stage, commit if changed, and push to origin main
-Invoke-GitChecked @("add", "-A") | Out-Null
+# 5. Stage targeted changes (or all audited files when no -DayFolder specified), commit, and push
+if ($DayFolder -ne "") {
+    $pathsToStage = New-Object System.Collections.Generic.List[string]
+    $pathsToStage.Add($DayFolder)
+    foreach ($metaFile in @("tracker.json", "SECURITY_AUDIT_LOG.md")) {
+        if (Test-Path (Join-Path $RepoRoot $metaFile)) {
+            $pathsToStage.Add($metaFile)
+        }
+    }
+    Invoke-GitChecked (@("add", "--") + $pathsToStage) | Out-Null
+} else {
+    Invoke-GitChecked @("add", "-A") | Out-Null
+}
 
 & git -C $RepoRoot diff --cached --quiet
 $hasStagedChanges = ($LASTEXITCODE -ne 0)
