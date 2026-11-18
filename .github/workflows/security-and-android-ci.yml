@@ -154,7 +154,7 @@ jobs:
 
       - name: Upload APK Artifacts
         if: steps.discover.outputs.has_projects == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: daily-android-debug-apks
           path: artifacts_out/*.apk
