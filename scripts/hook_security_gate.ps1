@@ -49,17 +49,23 @@ try {
             Write-Deny "Security Overseer Hook blocked command referencing raw auth tokens, keystores, or .private files."
         }
 
-        # Always run security_audit.ps1 before any direct git commit or git push command (including git -C ... / git.exe)
+        # Always run security_audit.ps1 AND verify_day_attestation.ps1 before any direct git commit or git push command
         if ($cmdLine -match "${gitPrefixRegex}\s+(commit|push)\b") {
             $auditScript = Join-Path $PSScriptRoot "security_audit.ps1"
+            $attestationScript = Join-Path $PSScriptRoot "verify_day_attestation.ps1"
             $prevEAP = $ErrorActionPreference
             $ErrorActionPreference = "Continue"
             $auditOut = & powershell -NoProfile -ExecutionPolicy Bypass -File $auditScript -Quiet 2>&1
             $auditCode = $LASTEXITCODE
+            $attestOut = & powershell -NoProfile -ExecutionPolicy Bypass -File $attestationScript -Action Verify -Quiet 2>&1
+            $attestCode = $LASTEXITCODE
             $ErrorActionPreference = $prevEAP
 
             if ($auditCode -ne 0) {
                 Write-Deny "Security Overseer Hook blocked git commit/push because security_audit.ps1 failed: $($auditOut -join ' ')"
+            }
+            if ($attestCode -ne 0) {
+                Write-Deny "Security Overseer Hook blocked git commit/push because SECURITY_REVIEW.md attestation failed: $($attestOut -join ' ')"
             }
         }
     }

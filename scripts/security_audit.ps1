@@ -46,6 +46,8 @@ $unsafeExecRegex = '(Runtime\.getRuntime\(\)\.exec|ProcessBuilder\s*\(|addJavasc
 $openSocketRegex = '(new\s+ServerSocket\s*\(|ServerSocket\s*\(|ServerSocketChannel\.open|DatagramSocket\s*\(|AsynchronousServerSocketChannel\.open|LocalServerSocket\s*\()'
 $cleartextHttpUrlRegex = 'http://(?!(schemas\.android\.com/|www\.w3\.org/|ns\.adobe\.com/|schemas\.xmlsoap\.org/|apache\.org/|gradle\.org/|maven\.apache\.org/))[^\s"''`>]+'
 $exportedServiceRegex = '<(service|receiver|provider)\b[^>]*android:exported\s*=\s*"true"'
+$privacyTrackingRegex = '(Settings\.Secure\.ANDROID_ID|AdvertisingIdClient|getImei\s*\(|getDeviceId\s*\(|getMacAddress\s*\(|Build\.SERIAL|Build\.getSerial\s*\()'
+$analyticsSdkRegex = '(firebase-analytics|play-services-ads|play-services-measurement|com\.mixpanel|com\.amplitude|com\.appsflyer|io\.branch\.sdk|facebook-android-sdk)'
 $usernameRegex = if ($env:USERNAME -and $env:USERNAME.Length -ge 3) { "(?<![A-Za-z0-9_])$([regex]::Escape($env:USERNAME))(?![A-Za-z0-9_])" } else { "" }
 
 $violations = New-Object System.Collections.Generic.List[string]
@@ -129,6 +131,12 @@ foreach ($relPath in $candidateFiles) {
         }
         if ($fullText -match $openSocketRegex) {
             $violations.Add("${normalizedRel}: Unauthenticated inbound listening socket detected.")
+        }
+        if ($fullText -match $privacyTrackingRegex) {
+            $violations.Add("${normalizedRel}: Forbidden device-fingerprinting/tracking identifier access detected.")
+        }
+        if (($ext -in @(".gradle", ".kts")) -and ($fullText -match $analyticsSdkRegex)) {
+            $violations.Add("${normalizedRel}: Forbidden third-party analytics/ad SDK dependency detected.")
         }
     }
 

@@ -5,8 +5,8 @@
   "target_builder": "Google AI Studio Web Browser (Build -> Android / Kotlin Jetpack Compose)",
   "target_device": "Android 8.0+ / Google Play Store & Moto G Stylus (Zero GMS bloat, Play Store Compliant)",
   "distribution_policy": "Google Play Store Ready (unique io.github.elizabackrooms.<slug> packageId, targetSdk 35, runtime permission rationale UI, in-app Privacy & Data Safety disclosure, play_store_listing.md, and Download App triggered in AI Studio)",
-  "connectivity_policy": "Online-Enabled by Default (android.permission.INTERNET + free keyless public REST APIs via HttpsURLConnection/Coroutines + local SharedPreferences cache for offline resilience)",
-  "security_policy": "Zero PII/secrets in repo; HTTPS-only TLS networking (usesCleartextTraffic=false, instanceFollowRedirects=false, 10s timeouts), DNS-checked SSRF blocklist, strict untrusted input bounds (BLE/NFC/AFSK/JSON), SecureRandom per-user tokens + Keystore AES-GCM, exported=false internal components, allowBackup=false",
+  "connectivity_policy": "Privacy-by-Default Opt-In Online (android.permission.INTERNET + free keyless public REST APIs via HttpsURLConnection/Coroutines; stateless & offline by default until user opts in to save or sync)",
+  "security_policy": "Zero PII/secrets/device-IDs/analytics; mandatory pre-upload Security Overseer subagent audit + SHA-256 SECURITY_REVIEW.md sign-off; HTTPS-only TLS (usesCleartextTraffic=false, instanceFollowRedirects=false, 10s timeouts), DNS-checked SSRF blocklist, strict input bounds (BLE/NFC/AFSK/JSON), SecureRandom per-user tokens + Keystore AES-GCM, exported=false internal components, allowBackup=false",
   "current_day": 3,
   "days_completed": [
     1,

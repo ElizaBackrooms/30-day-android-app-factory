@@ -1,6 +1,19 @@
 # Security Policy & App Hardening Architecture
 
-This repository publishes open-source native Kotlin + Jetpack Compose Android applications built for reliability, privacy, and safe community collaboration. Every application from **Day 3 onward** must adhere to the strict app-level and repository-level security controls below. *(Days 1–2 were offline-only v1 prototypes authored before this policy and must be retrofitted with these manifest/packaging controls before any APK or Play Store release.)*
+This repository publishes open-source native Kotlin + Jetpack Compose Android applications built for reliability, privacy, and safe community collaboration. Every application from **Day 3 onward** must adhere to the strict privacy, app-level, and repository-level security controls below. *(Days 1–2 were offline-only v1 prototypes authored before this policy and must be retrofitted with these manifest/packaging controls before any APK or Play Store release.)*
+
+---
+
+## 0. Privacy by Default & Explicit Opt-In Consent (Zero Unsolicited Data)
+
+Every app follows **strict data minimization**:
+1. **Do Not Save User Data Unless Opted In:**
+   - Apps operate **stateless / in-memory by default**. Local persistence (`SharedPreferences` logs, sensor histories, saved presets) MUST be gated behind an explicit user **Opt-In** toggle (defaulting to `false`) or explicit user save action, paired with a 1-tap **"Wipe All Local Data"** button.
+2. **Do Not Transmit Online Data Unless Opted In:**
+   - Apps MUST NOT send network requests silently in the background or on app startup without explicit user opt-in (`"Online Features (Opt-In)"` switch defaulting to `false`) or an explicit user-triggered action button.
+   - Public weather/elevation/solar API lookups must use manual or coarse rounded coordinates by default unless the user explicitly opts in to GPS lookup.
+3. **Zero Device Fingerprinting, Analytics, or Telemetry:**
+   - Strictly forbid `Settings.Secure.ANDROID_ID`, `AdvertisingIdClient`, `TelephonyManager` IMEI/IMSI, MAC addresses, `Build.SERIAL`/`getSerial()`, and any analytics, ad, or crash-tracking SDKs (`firebase-analytics`, `play-services-ads`, `mixpanel`, `amplitude`, etc.).
 
 ---
 
@@ -29,7 +42,7 @@ Because these apps are downloadable and may connect to public APIs, user-configu
 
 5. **Zero Hardcoded Shared Secrets & Hardened Component/Storage Config**
    - Never hardcode API keys, shared secret tokens, or shared public webhook channels/topics in source code.
-   - Generate per-user webhook topics or pairing tokens locally via `java.security.SecureRandom` (>= 128 bits of entropy). Encrypt sensitive secrets/passphrases at rest via Android Keystore (`AES/GCM/NoPadding` wrapping) inside `Context.MODE_PRIVATE` storage, and never log tokens, seeds, or webhook URLs to `android.util.Log`.
+   - Generate per-user webhook topics or pairing tokens locally via `java.security.SecureRandom` (>= 128 bits of entropy) only when the user enables that feature. Encrypt sensitive secrets/passphrases at rest via Android Keystore (`AES/GCM/NoPadding` wrapping) inside `Context.MODE_PRIVATE` storage, and never log tokens, seeds, or webhook URLs to `android.util.Log`.
    - Set `android:allowBackup="false"`, `android:dataExtractionRules` (API 31+), `android:exported="false"` on all non-launcher components (services, receivers, providers), `PendingIntent.FLAG_IMMUTABLE` on all `PendingIntent` instances, and `WindowManager.LayoutParams.FLAG_SECURE` on screens displaying sensitive keys or seeds.
 
 6. **Graceful Permissions & Hardware Fallbacks**
@@ -37,15 +50,14 @@ Because these apps are downloadable and may connect to public APIs, user-configu
 
 ---
 
-## 2. Repository & Contributor Security Policy
+## 2. Mandatory Pre-Upload Security Overseer Gate & Repository Policy
 
-To ensure neither the maintainers nor contributors ever expose personal data, private build keys, or credentials:
+To prevent compromised code or leaked personal data from ever being uploaded to GitHub:
 
-- **No Personal Information (PII):** Never commit OS usernames, home directory paths, personal email addresses, or private Google AI Studio session URLs.
-- **No Keystores or Secrets:** Release signing keystores (`*.jks`, `*.keystore`), `keystore.properties`, `local.properties`, `.env` files, and API tokens are permanently blocked by `.gitignore` and automated pre-push checks.
-- **Pre-Execution Hook & Audit Gate:** `.agents/hooks.json` runs `scripts/hook_security_gate.ps1` before git commit/push/force-add commands, and all pushes run through `scripts/publish_to_github.ps1` + `scripts/security_audit.ps1`, blocking any commit containing local user paths, private URLs, keystores, credential patterns, cleartext HTTP, TLS bypasses, open sockets, or execution sinks.
-- **Dedicated Security Overseer Agents:** Every app prompt and extracted Android project is audited by the workspace `security-overseer` subagent (`AGENTS.md`, `.agents/skills/android-security-overseer/SKILL.md`) plus daily scheduled oversight audits logged in `SECURITY_AUDIT_LOG.md`.
-- **GitHub Cloud Security Agents:** `.github/workflows/security-and-android-ci.yml` runs on every push and pull request; `.github/workflows/codeql.yml` (CodeQL SAST) runs on every push, pull request, and weekly Monday schedule; `.github/dependabot.yml` monitors dependencies; and GitHub Secret Scanning + Push Protection guard all pushes.
+- **Pre-Build & Pre-Upload Security Overseer Review (Hard Gate):** Every app from Day 3 onward (and any `days/day_*/android_project/`) MUST be audited by the dedicated `security-overseer` subagent **before** Google AI Studio submission and **again after** extracting `android_project/` **before** any commit or push to GitHub.
+- **Cryptographic Attestation (`SECURITY_REVIEW.md`):** After passing review, `scripts/verify_day_attestation.ps1 -Action Write` records a SHA-256 manifest hash of every file in `days/day_NN_<slug>/` inside `SECURITY_REVIEW.md`. `scripts/publish_to_github.ps1`, `scripts/hook_security_gate.ps1`, and GitHub Actions CI all refuse commits/pushes if any file in the day folder was added or modified without a matching `SECURITY_REVIEW.md` sign-off.
+- **No Personal Information (PII) or Keystores:** OS usernames, home directory paths, personal email addresses, private Google AI Studio URLs, keystores (`*.jks`, `*.keystore`), and secrets are blocked by `.gitignore`, `scripts/hook_security_gate.ps1`, `scripts/security_audit.ps1`, and GitHub Secret Scanning + Push Protection.
+- **GitHub Cloud Security Agents:** `.github/workflows/security-and-android-ci.yml` runs on every push and pull request; `.github/workflows/codeql.yml` (CodeQL SAST) runs on every push, pull request, and weekly Monday schedule; and `.github/dependabot.yml` monitors dependencies.
 
 ---
 

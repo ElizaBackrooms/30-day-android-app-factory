@@ -1,6 +1,7 @@
 param(
     [string]$DayFolder = "",
-    [string]$CommitMessage = ""
+    [string]$CommitMessage = "",
+    [switch]$ExtractOnly
 )
 
 $ErrorActionPreference = "Stop"
@@ -192,6 +193,22 @@ if ($ResolvedDayFolder -and (Test-Path $ResolvedDayFolder)) {
 # 3. Run shared Security & OpSec Audit Gate
 $auditScript = Join-Path $PSScriptRoot "security_audit.ps1"
 & $auditScript
+if ($LASTEXITCODE -ne 0) {
+    exit 1
+}
+
+if ($ExtractOnly) {
+    Write-Host "[OK] ExtractOnly mode complete. Run the security-overseer subagent and scripts/verify_day_attestation.ps1 -Action Write before publishing."
+    exit 0
+}
+
+# 3b. Enforce mandatory pre-upload Security Overseer SHA-256 attestation
+$attestationScript = Join-Path $PSScriptRoot "verify_day_attestation.ps1"
+if ($DayFolder -ne "") {
+    & $attestationScript -Action Verify -DayFolder $DayFolder
+} else {
+    & $attestationScript -Action Verify
+}
 if ($LASTEXITCODE -ne 0) {
     exit 1
 }

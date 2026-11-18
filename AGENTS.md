@@ -1,10 +1,14 @@
 # Workspace Security & Oversight Mandate
 
-Every agent, subagent, and scheduled automation operating in this workspace **must** enforce strict **Security Overseer** checks before generating, editing, building, or pushing code.
+Every agent, subagent, and scheduled automation operating in this workspace **must** enforce strict **Security Overseer** checks and **Privacy-by-Default (Opt-In Only)** rules before generating, editing, building, or uploading code.
 
-## Mandatory Security Overseer Gate (Required for Every App & Change)
+## Mandatory Gates (Required for Every App & Change)
 
-1. **Prompt & Architecture Review (Before Building):**
+1. **Privacy by Default (No User Data Saved/Sent Without Opt-In):**
+   - Apps operate **stateless / in-memory by default**. Local persistence (`SharedPreferences` logs/history) and online API/webhook calls MUST start **OFF (`false`)** behind explicit user opt-in toggles or explicit user action buttons, paired with a 1-tap **"Wipe All Local Data"** control.
+   - Zero device fingerprinting (`ANDROID_ID`, `AdvertisingIdClient`, IMEI, MAC, `Build.SERIAL`) and zero analytics/ad SDKs.
+
+2. **Prompt & Architecture Review (Before Building):**
    - Before submitting any `google_ai_studio_prompt.txt` to Google AI Studio, define and invoke a dedicated **`security-overseer`** subagent (`define_subagent` + `invoke_subagent`) to audit the prompt and `play_store_listing.md` against [SECURITY.md](SECURITY.md):
      - Package ID uses `io.github.elizabackrooms.<slug>` (never `com.example` or personal usernames).
      - `android:usesCleartextTraffic="false"`, `android:allowBackup="false"`, and `android:exported="false"` on all non-launcher components.
@@ -13,11 +17,13 @@ Every agent, subagent, and scheduled automation operating in this workspace **mu
      - Zero open listening sockets (`ServerSocket`, `DatagramSocket`, `LocalServerSocket`), zero hardcoded shared API keys/topics, `SecureRandom` (>=128-bit) per-user tokens stored in `MODE_PRIVATE` (wrapped with Android Keystore AES-GCM for sensitive credentials), `PendingIntent.FLAG_IMMUTABLE`, `FLAG_SECURE` on sensitive seed/token views, zero token logging, and strict length/allowlist validation for BLE, NFC, AFSK, barcode, and JSON inputs.
      - Accurate Google Play Data Safety declarations and runtime permission rationale UI.
 
-2. **Code & OpSec Review (Before Publishing to GitHub):**
-   - After downloading and extracting any `days/day_NN_<slug>/android_project/`, run `scripts/security_audit.ps1` and invoke the **`security-overseer`** subagent to audit the extracted Kotlin, Gradle, and `AndroidManifest.xml` files.
+3. **Pre-Upload Code Review & Cryptographic Sign-Off (Before Publishing to GitHub):**
+   - First extract downloaded bundles locally without pushing (`scripts/publish_to_github.ps1 -DayFolder days/day_NN_<slug> -ExtractOnly`).
+   - Run `scripts/security_audit.ps1` and invoke the **`security-overseer`** subagent to audit ALL files under `days/day_NN_<slug>/` (including extracted Kotlin, Gradle, `AndroidManifest.xml`, prompt, and Play Store listing). Fix any issue and re-audit until `PASS`.
+   - Record the SHA-256 verified approval receipt via `scripts/verify_day_attestation.ps1 -Action Write -DayFolder days/day_NN_<slug> -Summary "..."`.
    - Never store private Google AI Studio URLs (`ai_studio_url`), OS usernames, absolute local home paths, keystores, or tokens anywhere outside `.private/` (which is gitignored).
-   - Always push via `scripts/publish_to_github.ps1` so the pre-push security audit runs automatically before `git commit` and `git push`.
+   - Always push via `scripts/publish_to_github.ps1` (which enforces both `security_audit.ps1` and `verify_day_attestation.ps1 -Action Verify` before committing and pushing).
 
-3. **Real-Time Hook & Skill Support:**
+4. **Real-Time Hook & Skill Support:**
    - Use the `android-security-overseer` skill in `.agents/skills/android-security-overseer/SKILL.md` for full audit checklists.
-   - `.agents/hooks.json` enforces `scripts/hook_security_gate.ps1` on `run_command` to block unsafe commits/pushes, force-adds, or secret exposures.
+   - `.agents/hooks.json` enforces `scripts/hook_security_gate.ps1` on `run_command` to block unsafe commits/pushes, missing `SECURITY_REVIEW.md` sign-offs, force-adds, or secret exposures.

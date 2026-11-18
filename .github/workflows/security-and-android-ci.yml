@@ -93,10 +93,28 @@ jobs:
             fi
           done < <(find days -path 'days/*/android_project/*' \( -name '*.kt' -o -name '*.java' -o -name '*.xml' -o -name '*.gradle' -o -name '*.kts' \) -print0 2>/dev/null || true)
 
+          # 5. Enforce zero device fingerprinting / analytics SDKs
+          PRIVACY_PAT='(Settings\.Secure\.ANDROID_ID|AdvertisingIdClient|getImei[[:space:]]*\(|getDeviceId[[:space:]]*\(|getMacAddress[[:space:]]*\(|Build\.SERIAL|Build\.getSerial[[:space:]]*\()'
+          if git grep -nI -E "$PRIVACY_PAT" -- 'days/*/android_project/*.kt' 'days/*/android_project/**/*.kt' 'days/*/android_project/*.java' 'days/*/android_project/**/*.java'; then
+            echo "::error::Forbidden device-fingerprinting or tracking identifier detected in Android code!"
+            FAIL=1
+          fi
+
+          ANALYTICS_PAT='(firebase-analytics|play-services-ads|play-services-measurement|com\.mixpanel|com\.amplitude|com\.appsflyer|io\.branch\.sdk|facebook-android-sdk)'
+          if git grep -nI -E "$ANALYTICS_PAT" -- 'days/*/android_project/*.gradle' 'days/*/android_project/**/*.gradle' 'days/*/android_project/*.kts' 'days/*/android_project/**/*.kts'; then
+            echo "::error::Forbidden third-party analytics or ad SDK detected in Gradle build!"
+            FAIL=1
+          fi
+
           if [ "$FAIL" -ne 0 ]; then
             exit 1
           fi
           echo "Security & AppSec audit passed cleanly."
+
+      - name: Verify Security Overseer Pre-Upload Attestation (SHA-256)
+        shell: pwsh
+        run: |
+          ./scripts/verify_day_attestation.ps1 -Action Verify
 
   build-android-apps:
     name: Build Android Debug APKs
