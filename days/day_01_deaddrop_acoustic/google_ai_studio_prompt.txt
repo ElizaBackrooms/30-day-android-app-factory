@@ -1,0 +1,80 @@
+Build a complete, production-clean Android app in Kotlin and Jetpack Compose called "DeadDrop Acoustic" — an offline acoustic 300-baud BFSK data modem, CRC-16 packet encoder/decoder, and hardware Torch Morse beacon.
+
+STRICT BUILD & DEPENDENCY CONSTRAINTS (TARGET: LINEAGEOS / DE-GOOGLED MOTO G STYLUS):
+- Must run 100% natively on AOSP / LineageOS with ZERO Google Play Services (GMS), ZERO Firebase SDK, ZERO proprietary Google APIs.
+- Single-module Jetpack Compose Material 3 project using ONLY standard Android SDK, AndroidX Core/Activity-Compose, Compose UI/Foundation/Canvas, Material3, Material Icons Extended, and kotlinx.coroutines.
+- Do NOT use Room, Hilt, Koin, CameraX, Navigation-Compose, Play Services Location, or any third-party DSP/serialization libraries.
+- Persist the packet log using SharedPreferences + org.json.JSONArray/JSONObject.
+- Zero placeholder TODOs, zero unimplemented stubs, and zero UI-thread blocking.
+
+PERMISSIONS & MANIFEST:
+- Declare `android.permission.RECORD_AUDIO` and optional `android.permission.ACCESS_FINE_LOCATION` / `android.permission.ACCESS_COARSE_LOCATION`.
+- Add `<uses-feature android:name="android.hardware.camera.flash" android:required="false" />`. Do NOT request CAMERA permission (CameraManager.setTorchMode on API 23+ works without CAMERA permission).
+- Handle runtime permissions cleanly with `rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission())`. If location is denied or unavailable, let the user type a manual Grid/Coordinate string directly so SOS packets always work.
+
+THEME (DARK TACTICAL OLED):
+- Force a dark Material 3 tactical OLED color scheme:
+  - Background: #000000 (pure OLED black)
+  - Surface / Cards: #0A0F0D with subtle 1.dp #1C2B22 borders
+  - Primary: #00FF88 (phosphor green)
+  - Secondary / Sync: #FFB000 (tactical amber)
+  - Error / SOS / CRC Fail: #FF3B30
+  - Use `FontFamily.Monospace` for hex previews, frequencies, CRC values, coordinates, and timestamps.
+
+DSP & PACKET ENGINE (PURE KOTLIN, ZERO-ALLOCATION HOT PATH):
+Implement `ModemProtocol.kt` and `BfskCodec.kt`:
+1. Constants:
+   - Sample rate: `44100` Hz, 16-bit signed PCM mono
+   - Baud rate: `300` baud -> `147` samples per bit (`SAMPLES_PER_BIT = 147`)
+   - `FREQ_MARK = 1200.0` Hz (bit 1), `FREQ_SPACE = 2200.0` Hz (bit 0)
+   - `SYNC_WORD = 0xAA55`
+2. CRC-16-CCITT (`0x1021`, initial `0xFFFF`, no final XOR):
+   - Computed over `[typeByte, lengthByte, ...payloadBytes]`.
+3. Packet Frame (MSB-first bit serialization):
+   - 4 bytes Preamble: `0x55, 0x55, 0x55, 0x55`
+   - 2 bytes Sync Word: `0xAA, 0x55`
+   - 1 byte Type: `0x01` (TEXT), `0x02` (SOS_LOC), `0x03` (PING)
+   - 1 byte Payload Length (`1..120`)
+   - N bytes UTF-8 payload (max 120 bytes)
+   - 2 bytes CRC-16-CCITT (big-endian)
+   - 1 byte Postamble: `0xFF`
+4. Modulator (`encodeToPcm(packetBytes: ByteArray): ShortArray`):
+   - Phase-continuous FSK (`phase += 2.0 * PI * freq / 44100.0`, wrapped at `2.0 * PI`) generating `147` samples per bit at ~80% peak amplitude (`26000`).
+5. Demodulator (`BfskDemodulator` streaming sample consumer):
+   - Use a pre-allocated circular `FloatArray(147)` window and `step = 21` samples (`7` sub-steps per bit, `147 / 21 = 7`).
+   - Every 21 samples, run Goertzel over the 147-sample window for both `1200.0 Hz` and `2200.0 Hz` (`coeff = 2.0 * cos(2.0 * PI * f / 44100.0)`), computing normalized energy `markEnergy` and `spaceEnergy` and squelch-checked hard bit `if (markEnergy >= spaceEnergy) 1 else 0`.
+   - Maintain 7 parallel shift registers (one per sub-step phase `0..6`), shifting each phase's bit every 7 steps.
+   - Monitor all 7 registers for `0xAA55` (when signal energy exceeds a noise floor threshold). On sync match, lock onto that phase, read `type` and `length` (validate `length in 1..120`), read `length` payload bytes + `2` CRC bytes, verify CRC-16-CCITT, and invoke a callback with the decoded packet, computed CRC hex, `crcValid` boolean, and estimated SNR in dB.
+6. Audio I/O:
+   - TX: `AudioTrack` (`USAGE_MEDIA`, `CONTENT_TYPE_SONIFICATION`, `ENCODING_PCM_16BIT`, `CHANNEL_OUT_MONO`, `MODE_STATIC`) on `Dispatchers.IO`, releasing cleanly after playback completes.
+   - RX: `AudioRecord` (`MediaRecorder.AudioSource.MIC`, `44100`, `CHANNEL_IN_MONO`, `ENCODING_PCM_16BIT`) on `Dispatchers.Default` reading into a single pre-allocated `ShortArray`, feeding `BfskDemodulator` and emitting UI telemetry (downsampled 48-bar waveform + mark/space levels) throttled to ~20 FPS to avoid recomposition churn.
+
+TORCH MORSE BEACON (`TorchBeaconController.kt`):
+- Implement full International Morse Code table (`A-Z`, `0-9`, space/slash).
+- Timing from WPM (`dotMs = 1200L / wpm`, dash = `3 * dotMs`, intra-char gap = `dotMs`, char gap = `3 * dotMs`, word gap = `7 * dotMs`).
+- Use `CameraManager` to find the first camera ID with `CameraCharacteristics.FLASH_INFO_AVAILABLE == true` and toggle `setTorchMode(id, state)` wrapped safely in `try/catch`.
+- Always update `torchStateOn: Boolean` in UI state so an on-screen strobe indicator mirrors the Morse signal even on devices/emulators without a hardware flash. Ensure `finally` turns the torch OFF when stopped or when ViewModel clears.
+
+3-TAB UI ARCHITECTURE (`MainActivity.kt` + `DeadDropViewModel.kt` + `DeadDropScreens.kt`):
+Scaffold with dark top bar showing "DEADDROP ACOUSTIC // 300B BFSK" and 3 `NavigationBarItem` tabs:
+
+Tab 1 — `MODEM TX`:
+- Callsign input (`ALPHA-1`), Packet Type selector chips (`TEXT`, `SOS_LOC`, `PING`), Message text field (up to 100 chars).
+- GPS / Grid attachment row: "ATTACH GPS" button (checks `ACCESS_FINE_LOCATION`, reads `LocationManager` last known GPS/Network coordinates or prompts permission; always shows an editable "Manual Grid / Coords" field as immediate fallback).
+- Live Packet Inspector card showing formatted payload, total frame bytes, estimated audio duration (e.g. `1.42s`), and live `CRC-16: 0xXXXX`.
+- Primary button: **"TRANSMIT FSK AUDIO"** (plays real FSK audio burst and logs `TX` entry).
+- Prominent secondary button: **"1-TAP LOOPBACK SELF-TEST"** (encodes the current packet—or a default `PING` payload if message is empty—into PCM `ShortArray`, feeds that PCM buffer directly through a fresh `BfskDemodulator` on `Dispatchers.Default`, and logs the decoded `LOOPBACK` result with `CRC OK` banner right below the button so the user can verify end-to-end encode+decode on a single phone without needing a second device).
+
+Tab 2 — `DECODER RX`:
+- If `RECORD_AUDIO` is not granted, show a clear permission card with "GRANT MICROPHONE" button.
+- Start/Stop **"RX LISTENER"** button + live status badge (`IDLE`, `LISTENING`, `CARRIER`, `SYNC 0xAA55`, `CRC OK`, `CRC ERR`).
+- Custom Compose `Canvas` telemetry card:
+  - Dual horizontal bar meters for `1200 Hz (MARK 1)` and `2200 Hz (SPACE 0)`.
+  - 48-bar real-time audio amplitude visualizer.
+- Live Decoded Packets list showing received frames, timestamp, type badge, payload, CRC hex, and SNR.
+
+Tab 3 — `BEACON & LOG`:
+- Torch Morse Beacon panel: quick `"SOS"` button, custom beacon text field, WPM slider (`5..20`), `"LOOP CONTINUOUSLY"` switch, large glowing visual Morse indicator circle, and `"START BEACON"` / `"STOP BEACON"` button.
+- Packet Audit Log header with `"CLEAR LOG"` button and `LazyColumn` showing all `TX`, `RX`, and `LOOPBACK` entries with direction badge, CRC PASS/FAIL pill, and one-tap copy-to-clipboard button.
+
+Ensure every file compiles cleanly with zero missing imports, proper `@OptIn(ExperimentalMaterial3Api::class)` where needed, lifecycle-safe coroutine cancellation in `ViewModel.onCleared()`, and clean responsive layout on standard Android phones.

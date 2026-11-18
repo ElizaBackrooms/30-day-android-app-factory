@@ -1,0 +1,34 @@
+Generate a complete, production-ready, single-session Android app in Kotlin and Jetpack Compose called "StormGlass Local".
+
+### APP PHILOSOPHY & CONSTRAINTS (TARGET: LINEAGEOS / MOTO G STYLUS):
+1. Target: 100% offline-first survival & expedition utility for de-Googled Android / LineageOS devices. Zero internet permissions required.
+2. Zero heavy dependencies: NO Google Play Services (GMS), NO Firebase, NO Room, NO Hilt/Dagger, NO Retrofit, NO third-party chart libraries.
+3. Use Jetpack Compose Material 3, standard Android SDK (`android.hardware.Sensor`, `SensorManager`, `SensorEventListener`, `ToneGenerator`, `SharedPreferences`, `org.json.JSONArray/JSONObject`), and a custom Compose Canvas for graphing.
+4. Clean architecture that compiles cleanly in Google AI Studio Android without unresolved symbols or placeholder TODOs.
+
+### DUAL-MODE HARDWARE SENSOR HANDLING:
+- On startup, detect `sensorManager.getDefaultSensor(Sensor.TYPE_PRESSURE)`.
+- If available: Auto-bind `SensorEventListener` to sample real-time millibar/hPa data, low-pass filter the noise, and display a green "HARDWARE SENSOR: ACTIVE" badge.
+- If unavailable (e.g., Moto G Stylus 4G variants): Gracefully switch to "MANUAL LOGGING MODE", showing an amber badge. Provide a tactile, 1-tap manual pressure entry bar (+/- 0.1 and +/- 1.0 hPa nudges plus direct entry) so users with wrist barometers or NOAA weather radios can input readings. The app, graphing, and Zambretti algorithms must work 100% identically.
+
+### CORE DATA & LOGIC:
+1. Data Model:
+   `data class PressureReading(val timestamp: Long, val pressureHpa: Float, val isManual: Boolean = false, val note: String = "")`
+   Persist readings locally in `SharedPreferences` via `org.json.JSONArray`, keeping up to 100 recent entries.
+2. Zambretti Algorithm (Negretti & Zambra 1915):
+   - MSLP: `mslp = stationPressure * (1.0f - elevationMeters / 44330.0f).pow(-5.255f)`.
+   - 3-hour trend: `deltaP = currentPressure - pressure3HoursAgo`.
+   - Classify trend: Falling (`deltaP <= -1.6f`), Steady (`-1.6f < deltaP < 1.6f`), Rising (`deltaP >= 1.6f`).
+   - Compute Zambretti Index (1..26) with seasonal (+1 Summer / -1 Winter) and wind-quadrant modifiers, mapped to clear maritime/squall forecasts.
+3. Squall Warning Engine:
+   - Detect rapid drop (`deltaP <= threshold`, default `-2.0f` within 3 hours): trigger flashing crimson banner "SQUALL WARNING: RAPID PRESSURE DROP DETECTED" and an audible alert via `ToneGenerator(AudioManager.STREAM_ALARM, 80).startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 400)`.
+
+### 4-TAB JETPACK COMPOSE UI SPECIFICATION:
+Use a `Scaffold` with Material 3 `NavigationBar` and 4 tabs:
+- Tab 1 (`Cockpit & Barograph`): Top hardware badge (Hardware Sensor vs Manual), Station Pressure & MSLP display (toggleable hPa / inHg), Squall Alert Banner, interactive Compose Canvas graph (3h / 12h / 24h filters, gradient fill, min/max guides, trend arrow), and Quick Manual Log Bar (`-1.0`, `-0.1`, `+0.1`, `+1.0`, "Log Current Reading").
+- Tab 2 (`Zambretti Forecaster`): Elevation slider (0..3000m), Wind Direction selector (N..NW), Season toggle (Summer/Winter), Forecast Card with confidence & tendency explanation, and Tactical Storm-Readiness Checklist.
+- Tab 3 (`Historical Log & Settings`): Scrollable `LazyColumn` of logged readings (`[AUTO]` / `[MANUAL]`, relative time, ΔP), Alarm threshold slider (`-1.0` to `-4.0` hPa/3h), "Test Sound Alert" button, "Export CSV to Clipboard", "Generate 24h Simulated Squall Drop Demo Data", and "Clear History".
+- Tab 4 (`Tutorial & Field Guide`): Clean, scannable step-by-step "How to Use StormGlass Local" tutorial page explaining: (1) Hardware Sensor vs. Manual Logging Mode (how to log readings from a wrist barometer or NOAA radio), (2) Reading the Barograph & 3-Hour ΔP Trend (Rising / Steady / Falling), (3) Setting Elevation, Wind Direction & Season for accurate Zambretti MSLP forecasts, (4) Understanding Squall Warnings (what `-2.0 hPa / 3h` means and how to test/adjust the alarm), and (5) A "Load Demo Squall Data" quick-action button so new users can immediately see the graph and squall alert in action.
+
+VISUAL DESIGN:
+Deep tactical slate `#0F141A` background, `#1A222D` cards, `#FF9800` amber accents, `#00E5FF` data line, `#FF3B30` squall alert, clean responsive layout with `@OptIn(ExperimentalMaterial3Api::class)` where needed.

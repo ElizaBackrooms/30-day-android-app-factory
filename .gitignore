@@ -1,0 +1,33 @@
+# Private local session URLs and local-only configs
+.private/
+
+# Keystores, signing configs, and secrets
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.key
+*.pem
+keystore.properties
+local.properties
+.env
+.env.*
+*secret*
+*credentials*
+google-services.json
+
+# Android / Gradle / IDE build outputs
+.gradle/
+build/
+**/build/
+.idea/
+*.iml
+captures/
+.cxx/
+*.apk
+*.aab
+
+# OS noise
+.DS_Store
+Thumbs.db
+desktop.ini

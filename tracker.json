@@ -1,0 +1,37 @@
+{
+  "factory_name": "30-Day Daily Android App Factory",
+  "project_root": ".",
+  "github_repo": "https://github.com/ElizaBackrooms/30-day-android-app-factory",
+  "target_builder": "Google AI Studio Web Browser (Build -> Android / Kotlin Jetpack Compose)",
+  "target_device": "Android 8.0+ / Google Play Store & Moto G Stylus (Zero GMS bloat, Play Store Compliant)",
+  "distribution_policy": "Google Play Store Ready (unique io.github.elizabackrooms.<slug> packageId, targetSdk 35, runtime permission rationale UI, in-app Privacy & Data Safety disclosure, play_store_listing.md, and Download App triggered in AI Studio)",
+  "connectivity_policy": "Online-Enabled by Default (android.permission.INTERNET + free keyless public REST APIs via HttpURLConnection/Coroutines + local SharedPreferences cache for offline resilience)",
+  "security_policy": "Zero PII/secrets in repo; HTTPS-only TLS networking (usesCleartextTraffic=false), SSRF-safe webhooks, strict untrusted input bounds (BLE/NFC/AFSK/JSON), SecureRandom per-user tokens, exported=false internal components",
+  "current_day": 3,
+  "days_completed": [
+    1,
+    2
+  ],
+  "days": {
+    "1": {
+      "app_name": "DeadDrop Acoustic",
+      "category": "Doomsday & Grid-Down Survival Tech",
+      "status": "generated_in_ai_studio",
+      "generation_time": "6m 44s",
+      "files_edited": 30,
+      "day_dir": "days/day_01_deaddrop_acoustic",
+      "plan_path": "days/day_01_deaddrop_acoustic/day_01_plan.md",
+      "prompt_path": "days/day_01_deaddrop_acoustic/google_ai_studio_prompt.txt"
+    },
+    "2": {
+      "app_name": "StormGlass Local",
+      "category": "Doomsday & Grid-Down Survival Tech",
+      "status": "generated_in_ai_studio",
+      "generation_time": "7m 24s",
+      "files_edited": 26,
+      "day_dir": "days/day_02_stormglass_local",
+      "plan_path": "days/day_02_stormglass_local/day_02_plan.md",
+      "prompt_path": "days/day_02_stormglass_local/google_ai_studio_prompt.txt"
+    }
+  }
+}
