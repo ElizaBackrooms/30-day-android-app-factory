@@ -25,7 +25,8 @@ function Invoke-GitChecked {
     try {
         $output = & git -C $RepoRoot @GitArgs 2>&1
         $code = $LASTEXITCODE
-    } finally {
+    }
+    finally {
         $ErrorActionPreference = $prevEAP
     }
     if ($code -ne 0) {
@@ -39,10 +40,12 @@ $ResolvedDayFolder = $null
 if ($DayFolder -ne "") {
     if ([System.IO.Path]::IsPathRooted($DayFolder)) {
         $ResolvedDayFolder = $DayFolder
-    } else {
+    }
+    else {
         $ResolvedDayFolder = Join-Path $RepoRoot $DayFolder
     }
-} else {
+}
+else {
     $daysDir = Join-Path $RepoRoot "days"
     if (Test-Path $daysDir) {
         $latest = Get-ChildItem -Path $daysDir -Directory -Filter "day_*" | Sort-Object Name -Descending | Select-Object -First 1
@@ -62,8 +65,8 @@ if ($ResolvedDayFolder -and (Test-Path $ResolvedDayFolder)) {
 
         Add-Type -AssemblyName System.IO.Compression.FileSystem
         $recentZips = Get-ChildItem -Path $downloadsDir -Filter "*.zip" -File -ErrorAction SilentlyContinue |
-            Where-Object { $_.LastWriteTime -ge $cutoff } |
-            Sort-Object LastWriteTime -Descending
+        Where-Object { $_.LastWriteTime -ge $cutoff } |
+        Sort-Object LastWriteTime -Descending
 
         foreach ($zip in $recentZips) {
             $isAndroidBundle = $false
@@ -84,10 +87,12 @@ if ($ResolvedDayFolder -and (Test-Path $ResolvedDayFolder)) {
                     if ($hasGradle -and $hasManifest) {
                         $isAndroidBundle = $true
                     }
-                } finally {
+                }
+                finally {
                     $archive.Dispose()
                 }
-            } catch {
+            }
+            catch {
                 continue
             }
 
@@ -112,7 +117,8 @@ if ($ResolvedDayFolder -and (Test-Path $ResolvedDayFolder)) {
                             }
                             if ([string]::IsNullOrEmpty($entry.Name)) {
                                 New-Item -ItemType Directory -Path $destPath -Force | Out-Null
-                            } else {
+                            }
+                            else {
                                 $destParent = Split-Path -Parent $destPath
                                 if (-not (Test-Path $destParent)) {
                                     New-Item -ItemType Directory -Path $destParent -Force | Out-Null
@@ -120,7 +126,8 @@ if ($ResolvedDayFolder -and (Test-Path $ResolvedDayFolder)) {
                                 [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $destPath, $true)
                             }
                         }
-                    } finally {
+                    }
+                    finally {
                         $zipArchive.Dispose()
                     }
 
@@ -146,15 +153,15 @@ if ($ResolvedDayFolder -and (Test-Path $ResolvedDayFolder)) {
                     $blockedExts = @(".jks", ".keystore", ".p12", ".pfx", ".key", ".pem", ".ppk", ".cer", ".crt", ".der", ".mobileprovision", ".secret")
 
                     Get-ChildItem -Path $targetProjectDir -Recurse -Force -ErrorAction SilentlyContinue |
-                        Where-Object {
-                            $_.Name -in $blockedNames -or
-                            $_.Extension.ToLowerInvariant() -in $blockedExts -or
-                            $_.Name -like ".env.*" -or
-                            $_.Name -like "id_rsa*" -or
-                            $_.Name -like "id_ed25519*" -or
-                            $_.Name -like "*service-account*.json" -or
-                            $_.Name -like "*firebase-adminsdk*.json"
-                        } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+                    Where-Object {
+                        $_.Name -in $blockedNames -or
+                        $_.Extension.ToLowerInvariant() -in $blockedExts -or
+                        $_.Name -like ".env.*" -or
+                        $_.Name -like "id_rsa*" -or
+                        $_.Name -like "id_ed25519*" -or
+                        $_.Name -like "*service-account*.json" -or
+                        $_.Name -like "*firebase-adminsdk*.json"
+                    } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 
                     # Scrub Windows/macOS/Linux home directory paths inside extracted text files (UTF-8 without BOM)
                     $textExtensions = @(".kt", ".kts", ".java", ".xml", ".gradle", ".properties", ".md", ".txt", ".json", ".pro", ".yml", ".yaml")
@@ -164,28 +171,28 @@ if ($ResolvedDayFolder -and (Test-Path $ResolvedDayFolder)) {
                     $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 
                     Get-ChildItem -Path $targetProjectDir -Recurse -File -ErrorAction SilentlyContinue |
-                        Where-Object { $textExtensions -contains $_.Extension.ToLowerInvariant() } |
-                        ForEach-Object {
-                            $raw = Get-Content -Path $_.FullName -Raw -ErrorAction SilentlyContinue
-                            if ($null -ne $raw) {
-                                $sanitized = $raw -replace $winPathPattern, '<USER_HOME>'
-                                $sanitized = $sanitized -replace $macPathPattern, '<USER_HOME>'
-                                $sanitized = $sanitized -replace $linuxPathPattern, '<USER_HOME>'
-                                if ($sanitized -ne $raw) {
-                                    [System.IO.File]::WriteAllText($_.FullName, $sanitized, $utf8NoBom)
-                                }
+                    Where-Object { $textExtensions -contains $_.Extension.ToLowerInvariant() } |
+                    ForEach-Object {
+                        $raw = Get-Content -Path $_.FullName -Raw -ErrorAction SilentlyContinue
+                        if ($null -ne $raw) {
+                            $sanitized = $raw -replace $winPathPattern, '<USER_HOME>'
+                            $sanitized = $sanitized -replace $macPathPattern, '<USER_HOME>'
+                            $sanitized = $sanitized -replace $linuxPathPattern, '<USER_HOME>'
+                            if ($sanitized -ne $raw) {
+                                [System.IO.File]::WriteAllText($_.FullName, $sanitized, $utf8NoBom)
                             }
                         }
+                    }
 
                     # Normalize Android template KDoc http://d.android.com links to https://
                     Get-ChildItem -Path $targetProjectDir -Recurse -File -Include "*.kt", "*.java" -ErrorAction SilentlyContinue |
-                        ForEach-Object {
-                            $kRaw = Get-Content -Path $_.FullName -Raw -ErrorAction SilentlyContinue
-                            if ($null -ne $kRaw -and $kRaw -match 'http://d\.android\.com/') {
-                                $kClean = $kRaw -replace 'http://d\.android\.com/', 'https://d.android.com/'
-                                [System.IO.File]::WriteAllText($_.FullName, $kClean, $utf8NoBom)
-                            }
+                    ForEach-Object {
+                        $kRaw = Get-Content -Path $_.FullName -Raw -ErrorAction SilentlyContinue
+                        if ($null -ne $kRaw -and $kRaw -match 'http://d\.android\.com/') {
+                            $kClean = $kRaw -replace 'http://d\.android\.com/', 'https://d.android.com/'
+                            [System.IO.File]::WriteAllText($_.FullName, $kClean, $utf8NoBom)
                         }
+                    }
 
                     # Normalize Google AI Studio Gradle & Manifest boilerplate for clean CI builds and LineageOS/Play compliance
                     $appIdSlug = (($dayLeaf -replace '^day_\d+_', '') -replace '[^A-Za-z0-9]', '').ToLowerInvariant()
@@ -261,13 +268,13 @@ if ($ResolvedDayFolder -and (Test-Path $ResolvedDayFolder)) {
                         [System.IO.File]::WriteAllText($backupRulesPath, $backupRulesXml, $utf8NoBom)
                     }
                     Get-ChildItem -Path (Join-Path $targetProjectDir "app\src\test") -Recurse -Filter "*.kt" -ErrorAction SilentlyContinue |
-                        ForEach-Object {
-                            $tRaw = Get-Content -Path $_.FullName -Raw -ErrorAction SilentlyContinue
-                            if ($null -ne $tRaw -and $tRaw -match '@Config\(sdk\s*=\s*\[36\]\)') {
-                                $tClean = $tRaw -replace '@Config\(sdk\s*=\s*\[36\]\)', '@Config(sdk = [35])'
-                                [System.IO.File]::WriteAllText($_.FullName, $tClean, $utf8NoBom)
-                            }
+                    ForEach-Object {
+                        $tRaw = Get-Content -Path $_.FullName -Raw -ErrorAction SilentlyContinue
+                        if ($null -ne $tRaw -and $tRaw -match '@Config\(sdk\s*=\s*\[36\]\)') {
+                            $tClean = $tRaw -replace '@Config\(sdk\s*=\s*\[36\]\)', '@Config(sdk = [35])'
+                            [System.IO.File]::WriteAllText($_.FullName, $tClean, $utf8NoBom)
                         }
+                    }
 
                     # Copy source zip to attached microSD card (/storage/7485-1F18) if USB phone is connected
                     $adbExe = Join-Path $env:LOCALAPPDATA "Android\Sdk\platform-tools\adb.exe"
@@ -278,7 +285,8 @@ if ($ResolvedDayFolder -and (Test-Path $ResolvedDayFolder)) {
                                 & $adbExe shell mkdir -p /storage/7485-1F18/AndroidApps 2>$null | Out-Null
                                 & $adbExe push $zip.FullName "/storage/7485-1F18/AndroidApps/$($dayLeaf)-source.zip" 2>$null | Out-Null
                             }
-                        } catch {}
+                        }
+                        catch {}
                     }
 
                     Write-Host "[OK] Extracted Android project bundle '$($zip.Name)' -> $targetProjectDir"
@@ -292,7 +300,8 @@ if ($ResolvedDayFolder -and (Test-Path $ResolvedDayFolder)) {
                             [System.IO.File]::WriteAllText($dependabotFile, ($dbRaw.TrimEnd() + "`n" + $gradleBlock), $utf8NoBom)
                         }
                     }
-                } finally {
+                }
+                finally {
                     if (Test-Path $tempExtractDir) {
                         Remove-Item -Path $tempExtractDir -Recurse -Force -ErrorAction SilentlyContinue
                     }
@@ -319,7 +328,8 @@ if ($ExtractOnly) {
 $attestationScript = Join-Path $PSScriptRoot "verify_day_attestation.ps1"
 if ($DayFolder -ne "") {
     & $attestationScript -Action Verify -DayFolder $DayFolder
-} else {
+}
+else {
     & $attestationScript -Action Verify
 }
 if (-not $? -or $LASTEXITCODE -ne 0) {
@@ -351,7 +361,8 @@ if ($DayFolder -ne "") {
         }
     }
     Invoke-GitChecked (@("add", "--") + $pathsToStage) | Out-Null
-} else {
+}
+else {
     Invoke-GitChecked @("add", "-A") | Out-Null
 }
 
@@ -364,7 +375,8 @@ if ($hasStagedChanges) {
     }
     Invoke-GitChecked @("commit", "-m", $CommitMessage) | Out-Null
     Write-Host "[OK] Committed: $CommitMessage"
-} else {
+}
+else {
     Write-Host "[INFO] No new changes to commit."
 }
 
@@ -377,6 +389,7 @@ $ErrorActionPreference = $prevEAP
 if ($revListCode -ne 0 -or [int]$aheadCount -gt 0 -or $hasStagedChanges) {
     Invoke-GitChecked @("push", "-u", "origin", "main") | Out-Null
     Write-Host "[OK] Pushed main to origin."
-} else {
+}
+else {
     Write-Host "[OK] origin/main is already up to date."
 }
