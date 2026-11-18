@@ -3,7 +3,9 @@
   "project_root": ".",
   "github_repo": "https://github.com/ElizaBackrooms/30-day-android-app-factory",
   "target_builder": "Google AI Studio Web Browser (Build -> Android / Kotlin Jetpack Compose)",
-  "target_device": "Moto G Stylus 2023 (LineageOS / AOSP, zero GMS, minSdk 26) & Google Play Store (Android 16 targetSdk 36)",
+  "target_device": "Moto G Stylus 5G - 2023 (genevn, LineageOS 24.0 / Android 17 / API 37, zero GMS, Barometer+Gyro+Compass+NFC+BLE+Flash) & Google Play Store (targetSdk 36)",
+  "compatibility_rule": "DO NOT BUILD if the app cannot run natively on Moto G Stylus 5G (2023) running LineageOS 24.0 (zero GMS/Firebase, no root, no Android-17-restricted APIs); mark skipped_incompatible and advance.",
+  "ux_policy": "Plain-English normie-friendly labels, 1-line helper text under controls, and beginner How-to-Use tab on every app; acronyms secondary.",
   "distribution_policy": "Google Play Store Ready (unique io.github.elizabackrooms.<slug> packageId, targetSdk 36 / Android 16 Play compliance, enableEdgeToEdge, adaptive layouts, runtime permission rationale UI, Privacy Policy URL + in-app Data Safety disclosure, play_store_listing.md, and AI Studio ZIP export)",
   "connectivity_policy": "Privacy-by-Default Opt-In Online (android.permission.INTERNET + free keyless public REST APIs via HttpsURLConnection/Coroutines; stateless & offline by default until user opts in to save or sync)",
   "security_policy": "Zero PII/secrets/device-IDs/analytics; mandatory pre-upload Security Overseer subagent audit + SHA-256 SECURITY_REVIEW.md sign-off; HTTPS-only TLS (usesCleartextTraffic=false, instanceFollowRedirects=false, 10s timeouts), DNS-checked SSRF blocklist, strict input bounds (BLE/NFC/AFSK/JSON), SecureRandom per-user tokens + Keystore AES-GCM, exported=false internal components, allowBackup=false",
@@ -16,22 +18,28 @@
     "1": {
       "app_name": "DeadDrop Acoustic",
       "category": "Doomsday & Grid-Down Survival Tech",
-      "status": "generated_in_ai_studio",
+      "status": "published_to_github",
       "generation_time": "6m 44s",
       "files_edited": 30,
       "day_dir": "days/day_01_deaddrop_acoustic",
       "plan_path": "days/day_01_deaddrop_acoustic/day_01_plan.md",
-      "prompt_path": "days/day_01_deaddrop_acoustic/google_ai_studio_prompt.txt"
+      "prompt_path": "days/day_01_deaddrop_acoustic/google_ai_studio_prompt.txt",
+      "listing_path": "days/day_01_deaddrop_acoustic/play_store_listing.md",
+      "security_review_path": "days/day_01_deaddrop_acoustic/SECURITY_REVIEW.md",
+      "project_path": "days/day_01_deaddrop_acoustic/android_project"
     },
     "2": {
       "app_name": "StormGlass Local",
       "category": "Doomsday & Grid-Down Survival Tech",
-      "status": "generated_in_ai_studio",
+      "status": "published_to_github",
       "generation_time": "7m 24s",
       "files_edited": 26,
       "day_dir": "days/day_02_stormglass_local",
       "plan_path": "days/day_02_stormglass_local/day_02_plan.md",
-      "prompt_path": "days/day_02_stormglass_local/google_ai_studio_prompt.txt"
+      "prompt_path": "days/day_02_stormglass_local/google_ai_studio_prompt.txt",
+      "listing_path": "days/day_02_stormglass_local/play_store_listing.md",
+      "security_review_path": "days/day_02_stormglass_local/SECURITY_REVIEW.md",
+      "project_path": "days/day_02_stormglass_local/android_project"
     }
   }
 }

@@ -16,7 +16,7 @@ Apps from Day 3 onward follow **zero unsolicited user data** rules:
 
 ## 2. Google AI Studio Export & Internal Testing Workflow
 Once Google AI Studio (`aistudio.google.com/apps`) finishes compiling an app cleanly:
-1. **ZIP Export to PC:** Open the **Download / Export ZIP** option (under the top toolbar / **Settings** or **More** menu) to export the native Gradle + Kotlin + Jetpack Compose project `.zip` to your `Downloads` folder. (`scripts/publish_to_github.ps1 -ExtractOnly` automatically extracts and sanitizes it into `days/day_NN_<slug>/android_project/`.)
+1. **ZIP Export to PC:** Switch from **`Preview`** to the **`Code`** tab in the top toolbar of the right pane, click **`Export options`** (next to `More views`), and click **`Download as .zip file`** to save the native Gradle + Kotlin + Jetpack Compose project `.zip` to your `Downloads` folder. (`scripts/publish_to_github.ps1 -ExtractOnly` automatically extracts and sanitizes it into `days/day_NN_<slug>/android_project/`.)
 2. **Optional Direct Internal Track Publish:** Google AI Studio also provides **Open publish settings** (`Settings -> Publish`) for pushing directly to Google Play Console's Internal Testing track (up to 100 testers).
 3. **Play Store Release Kit:** Each day saves `play_store_listing.md` inside `days/day_NN_<slug>/` containing:
    - App Title (<= 30 chars) & Short Description (<= 80 chars)

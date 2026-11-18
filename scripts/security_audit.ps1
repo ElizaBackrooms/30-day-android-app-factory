@@ -34,7 +34,7 @@ $binaryExtensions = @(".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".ttf", 
 $winUserPathRegex = '[A-Za-z]:(?:\\\\|\\|/)Users(?:\\\\|\\|/)[^\s"''`]+'
 $macUserPathRegex = '/' + 'Users/' + '[^\s"''`]+'
 $linuxUserPathRegex = '/' + 'home/' + '[^\s"''`]+'
-$studioUrlRegex = 'aistudio\.google\.com' + '/apps/'
+$studioUrlRegex = '(aistudio\.google\.com|ai\.studio)' + '/apps/'
 $secretRegex = '((?<![A-Za-z0-9_])ghp_' + '[0-9A-Za-z_]{20,}|(?<![A-Za-z0-9_])gho_' + '[0-9A-Za-z_]{20,}|(?<![A-Za-z0-9_])github_pat_' + '[0-9A-Za-z_]{20,}|(?<![A-Za-z0-9_])AIza[0-9A-Za-z\-_]{35}|(?<![A-Za-z0-9_])sk-(?:proj-|ant-)?[0-9A-Za-z_-]{20,}|(?<![A-Za-z0-9_])sk_(?:live|test)_[0-9A-Za-z]{16,}|(?<![A-Za-z0-9_])AKIA[0-9A-Z]{16}|(?<![A-Za-z0-9_])xox[baprs]-[0-9A-Za-z-]{10,}|(?<![A-Za-z0-9_])GOCSPX-[0-9A-Za-z_-]{20,}|' + '-----BEGIN ([A-Z0-9 ]+ )?PRIVATE KEY' + '-----)'
 $cleartextRegex = 'usesCleartextTraffic\s*=\s*"' + 'true"'
 $cleartextFalseRegex = 'android:usesCleartextTraffic\s*=\s*"false"'

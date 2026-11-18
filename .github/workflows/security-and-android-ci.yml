@@ -32,7 +32,7 @@ jobs:
           fi
 
           # 2. Scan tracked text files for leaked tokens, private keys, user paths, or studio URLs
-          SECRET_PAT="(^|[^A-Za-z0-9_])(ghp_[0-9A-Za-z_]{20,}|gho_[0-9A-Za-z_]{20,}|github_pat_[0-9A-Za-z_]{20,}|AIza[0-9A-Za-z_-]{35}|sk-(proj-|ant-)?[0-9A-Za-z_-]{20,}|sk_(live|test)_[0-9A-Za-z]{16,}|AKIA[0-9A-Z]{16}|xox[baprs]-[0-9A-Za-z-]{10,}|GOCSPX-[0-9A-Za-z_-]{20,})|-----BEGIN ([A-Z0-9 ]+ )?PRIVATE KEY-----|aistudio[.]google[.]com/apps/"
+          SECRET_PAT="(^|[^A-Za-z0-9_])(ghp_[0-9A-Za-z_]{20,}|gho_[0-9A-Za-z_]{20,}|github_pat_[0-9A-Za-z_]{20,}|AIza[0-9A-Za-z_-]{35}|sk-(proj-|ant-)?[0-9A-Za-z_-]{20,}|sk_(live|test)_[0-9A-Za-z]{16,}|AKIA[0-9A-Z]{16}|xox[baprs]-[0-9A-Za-z-]{10,}|GOCSPX-[0-9A-Za-z_-]{20,})|-----BEGIN ([A-Z0-9 ]+ )?PRIVATE KEY-----|(aistudio[.]google[.]com|ai[.]studio)/apps/"
           if git grep -nI -E "$SECRET_PAT" -- . ':!.github/workflows/security-and-android-ci.yml'; then
             echo "::error::Potential secret, private key, or private AI Studio URL detected!"
             FAIL=1
@@ -150,6 +150,8 @@ jobs:
       - name: Setup Gradle
         if: steps.discover.outputs.has_projects == 'true'
         uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.3.1'
 
       - name: Accept Android SDK Licenses
         if: steps.discover.outputs.has_projects == 'true'

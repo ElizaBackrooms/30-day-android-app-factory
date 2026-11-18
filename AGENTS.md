@@ -4,11 +4,19 @@ Every agent, subagent, and scheduled automation operating in this workspace **mu
 
 ## Mandatory Gates (Required for Every App & Change)
 
-1. **Privacy by Default (No User Data Saved/Sent Without Opt-In):**
+1. **Device & OS Hard Gate — Moto G Stylus 5G (2023) / LineageOS 24.0 (Android 17 / API 37):**
+   - Verified target phone hardware (`genevn`): Accelerometer, Gyroscope, Compass/Magnetometer, Barometer, Light, Proximity, Mic/Speaker, Camera + Flash, NFC (+ HCE), BLE, Wi-Fi, GPS (`LocationManager`).
+   - **DO NOT BUILD IF INCOMPATIBLE:** Never build an app requiring Google Play Services (`com.google.android.gms`, `play-services-*`), Firebase SDKs, root/Magisk, missing sensors (IR blaster, UWB, thermal, heart-rate), or Android-17-restricted APIs (e.g., `/proc/net/arp`). If a day cannot run cleanly on this device + LineageOS 24.0, mark `status: "skipped_incompatible"` in `tracker.json` and advance instead of building a broken app.
+   - Always include `android:required="false"` on optional hardware `<uses-feature>` tags so all Android devices remain supported.
+
+2. **Plain-English ("Normie-Friendly") Labels & Online + Offline UX:**
+   - Every app supports **optional live online features (Opt-In)** via `HttpsURLConnection` with offline fallback, AND uses **simple, everyday plain-English labels** for buttons, tabs, meters, and settings (keeping technical acronyms secondary or in parentheses, plus 1-line helper subtitles and a beginner **"How to Use"** tab).
+
+3. **Privacy by Default (No User Data Saved/Sent Without Opt-In):**
    - Apps operate **stateless / in-memory by default**. Local persistence (`SharedPreferences` logs/history) and online API/webhook calls MUST start **OFF (`false`)** behind explicit user opt-in toggles or explicit user action buttons, paired with a 1-tap **"Wipe All Local Data"** control.
    - Zero device fingerprinting (`ANDROID_ID`, `AdvertisingIdClient`, IMEI, MAC, `Build.SERIAL`) and zero analytics/ad SDKs.
 
-2. **Prompt & Architecture Review (Before Building):**
+4. **Prompt & Architecture Review (Before Building):**
    - Before submitting any `google_ai_studio_prompt.txt` to Google AI Studio, define and invoke a dedicated **`security-overseer`** subagent (`define_subagent` + `invoke_subagent`) to audit the prompt and `play_store_listing.md` against [SECURITY.md](SECURITY.md):
      - Package ID uses `io.github.elizabackrooms.<slug>` (never `com.example` or personal usernames).
      - **LineageOS / Moto G Stylus 2023 Compatibility (Zero GMS):** Zero Google Play Services (`com.google.android.gms`, `play-services-*`) and zero Firebase SDKs; use standard AOSP APIs (`LocationManager`, `SensorManager`, `AudioTrack`, `CameraManager`, `NfcAdapter`, `BluetoothLeScanner`, `HttpsURLConnection`), `minSdk = 26`, and `android:required="false"` on optional hardware `<uses-feature>` tags (NFC, camera flash, barometer, BLE) with clean fallbacks.
@@ -18,13 +26,13 @@ Every agent, subagent, and scheduled automation operating in this workspace **mu
      - Zero open listening sockets (`ServerSocket`, `DatagramSocket`, `LocalServerSocket`), zero hardcoded shared API keys/topics, `SecureRandom` (>=128-bit) per-user tokens stored in `MODE_PRIVATE` (wrapped with Android Keystore AES-GCM for sensitive credentials), `PendingIntent.FLAG_IMMUTABLE`, `FLAG_SECURE` on sensitive seed/token views, zero token logging, and strict length/allowlist validation for BLE, NFC, AFSK, barcode, and JSON inputs.
      - Accurate Google Play Data Safety declarations, live Privacy Policy URL (`https://github.com/ElizaBackrooms/30-day-android-app-factory/blob/main/PRIVACY_POLICY.md`) linked both in-app and in `play_store_listing.md`, and runtime permission rationale UI.
 
-3. **Pre-Upload Code Review & Cryptographic Sign-Off (Before Publishing to GitHub):**
+5. **Pre-Upload Code Review & Cryptographic Sign-Off (Before Publishing to GitHub):**
    - First extract downloaded bundles locally without pushing (`scripts/publish_to_github.ps1 -DayFolder days/day_NN_<slug> -ExtractOnly`).
    - Run `scripts/security_audit.ps1` and invoke the **`security-overseer`** subagent to audit ALL files under `days/day_NN_<slug>/` (including extracted Kotlin, Gradle, `AndroidManifest.xml`, prompt, and Play Store listing). Fix any issue and re-audit until `PASS`.
    - Record the SHA-256 verified approval receipt via `scripts/verify_day_attestation.ps1 -Action Write -DayFolder days/day_NN_<slug> -Summary "..."`.
    - Never store private Google AI Studio URLs (`ai_studio_url`), OS usernames, absolute local home paths, keystores, or tokens anywhere outside `.private/` (which is gitignored).
    - Always push via `scripts/publish_to_github.ps1` (which enforces both `security_audit.ps1` and `verify_day_attestation.ps1 -Action Verify` before committing and pushing).
 
-4. **Real-Time Hook & Skill Support:**
+6. **Real-Time Hook & Skill Support:**
    - Use the `android-security-overseer` skill in `.agents/skills/android-security-overseer/SKILL.md` for full audit checklists.
    - `.agents/hooks.json` enforces `scripts/hook_security_gate.ps1` on `run_command` to block unsafe commits/pushes, missing `SECURITY_REVIEW.md` sign-offs, force-adds, or secret exposures.

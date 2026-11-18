@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">StormGlass Local</string>
+    <string name="tab_cockpit">Now</string>
+    <string name="tab_forecaster">Forecast</string>
+    <string name="tab_log">Log &amp; Alerts</string>
+    <string name="tab_guide">Help</string>
+    <string name="badge_hardware_active">BAROMETER SENSOR ON</string>
+    <string name="badge_manual_mode">MANUAL MODE</string>
+    <string name="squall_warning_title">STORM WARNING: AIR PRESSURE DROPPING FAST</string>
+    <string name="log_current_reading">Save Pressure Point</string>
+    <string name="test_sound_alert">Test Storm Alarm Sound</string>
+    <string name="export_csv_clipboard">Copy Readings as CSV</string>
+    <string name="generate_demo_data">Load 24h Sample Storm Drop</string>
+    <string name="load_demo_squall_data">Try Sample Storm Drop</string>
+    <string name="clear_history">Wipe All Local Data</string>
+</resources>

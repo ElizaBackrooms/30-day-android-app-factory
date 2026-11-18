@@ -1,0 +1,6 @@
+{
+  "name": "DeadDrop Acoustic",
+  "description": "Offline-first 300-baud sound-to-text BFSK messenger, CRC-16 verifier, flashlight Morse beacon, and optional opt-in HTTPS alert relay.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

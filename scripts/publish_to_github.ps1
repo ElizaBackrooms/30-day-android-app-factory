@@ -58,13 +58,13 @@ if ($ResolvedDayFolder -and (Test-Path $ResolvedDayFolder)) {
 
         foreach ($zip in $recentZips) {
             $isAndroidBundle = $false
-            $nameMatchesSlug = $false
+            $matchedTokens = 0
             foreach ($tok in $slugTokens) {
                 if ($zip.BaseName -match [regex]::Escape($tok)) {
-                    $nameMatchesSlug = $true
-                    break
+                    $matchedTokens++
                 }
             }
+            $nameMatchesSlug = ($slugTokens.Count -gt 0) -and ($matchedTokens -eq $slugTokens.Count)
 
             try {
                 $archive = [System.IO.Compression.ZipFile]::OpenRead($zip.FullName)
@@ -167,6 +167,71 @@ if ($ResolvedDayFolder -and (Test-Path $ResolvedDayFolder)) {
                                 }
                             }
                         }
+
+                    # Normalize Android template KDoc http://d.android.com links to https://
+                    Get-ChildItem -Path $targetProjectDir -Recurse -File -Include "*.kt", "*.java" -ErrorAction SilentlyContinue |
+                        ForEach-Object {
+                            $kRaw = Get-Content -Path $_.FullName -Raw -ErrorAction SilentlyContinue
+                            if ($null -ne $kRaw -and $kRaw -match 'http://d\.android\.com/') {
+                                $kClean = $kRaw -replace 'http://d\.android\.com/', 'https://d.android.com/'
+                                [System.IO.File]::WriteAllText($_.FullName, $kClean, $utf8NoBom)
+                            }
+                        }
+
+                    # Normalize Google AI Studio Gradle & Manifest boilerplate for clean CI builds and LineageOS/Play compliance
+                    $appIdSlug = (($dayLeaf -replace '^day_\d+_', '') -replace '[^A-Za-z0-9]', '').ToLowerInvariant()
+                    $appGradlePath = Join-Path $targetProjectDir "app\build.gradle.kts"
+                    if (Test-Path $appGradlePath) {
+                        $gText = Get-Content -Path $appGradlePath -Raw
+                        $gText = $gText -replace 'applicationId\s*=\s*"com\.(aistudio|example)[^"]*"', "applicationId = `"io.github.elizabackrooms.$appIdSlug`""
+                        $gText = $gText -replace '(?m)^\s*//\s*implementation\([^\r\n]*(firebase|play\.services|credentials\.play\.services)[^\r\n]*\)\r?\n?', ''
+                        $gText = $gText -replace 'signingConfig\s*=\s*signingConfigs\.getByName\("debugConfig"\)', 'if (file("${rootDir}/debug.keystore").exists()) { signingConfig = signingConfigs.getByName("debugConfig") }'
+                        $gText = $gText -replace 'signingConfig\s*=\s*signingConfigs\.getByName\("release"\)', 'if (file(System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks").exists()) { signingConfig = signingConfigs.getByName("release") }'
+                        if ($gText -match 'com\.google\.gms\.googleservices' -and ($gText -notmatch '^\s*implementation\(libs\.firebase')) {
+                            $gText = $gText -replace '(?m)^import\s+com\.google\.gms\.googleservices\.[^\r\n]*\r?\n?', ''
+                            $gText = $gText -replace '(?m)^\s*alias\(libs\.plugins\.(google\.services|secrets|google\.devtools\.ksp)\)\r?\n?', ''
+                            $gText = $gText -replace '(?s)\r?\n?secrets\s*\{.*?\}\r?\n?', "`n"
+                            $gText = $gText -replace '(?m)^\s*googleServices\s*\{[^\r\n]*\}\r?\n?', ''
+                        }
+                        [System.IO.File]::WriteAllText($appGradlePath, $gText, $utf8NoBom)
+                    }
+
+                    $rootGradlePath = Join-Path $targetProjectDir "build.gradle.kts"
+                    if ((Test-Path $rootGradlePath) -and (Test-Path $appGradlePath)) {
+                        $agCheck = Get-Content -Path $appGradlePath -Raw
+                        if ($agCheck -notmatch 'libs\.plugins\.google\.services') {
+                            $rgText = Get-Content -Path $rootGradlePath -Raw
+                            $rgText = $rgText -replace '(?m)^\s*alias\(libs\.plugins\.(google\.services|secrets|google\.devtools\.ksp)\)\s*apply\s+false\r?\n?', ''
+                            [System.IO.File]::WriteAllText($rootGradlePath, $rgText, $utf8NoBom)
+                        }
+                    }
+
+                    $manifestPath = Join-Path $targetProjectDir "app\src\main\AndroidManifest.xml"
+                    if (Test-Path $manifestPath) {
+                        $mText = Get-Content -Path $manifestPath -Raw
+                        $mText = $mText -replace 'android:allowBackup\s*=\s*"true"', 'android:allowBackup="false"'
+                        if ($mText -notmatch 'android:usesCleartextTraffic\s*=') {
+                            $mText = $mText -replace '<application\b', "<application`n        android:usesCleartextTraffic=`"false`""
+                        }
+                        [System.IO.File]::WriteAllText($manifestPath, $mText, $utf8NoBom)
+                    }
+
+                    # Strip private AI Studio URLs and unused boilerplate from extracted README.md and metadata.json
+                    $studioUrlScrubRegex = 'https?://(aistudio\.google\.com|ai\.studio)' + '/apps/[^\s)\]]*'
+                    $projReadmePath = Join-Path $targetProjectDir "README.md"
+                    if (Test-Path $projReadmePath) {
+                        $rText = Get-Content -Path $projReadmePath -Raw
+                        $rText = $rText -replace ('(?m)^.*' + $studioUrlScrubRegex + '.*\r?\n?'), ''
+                        $rText = $rText -replace '(?im)^.*GEMINI_API_KEY.*\r?\n?', ''
+                        $rText = $rText -replace '(?im)^.*\[`?\.env(\.local)?`?\].*\r?\n?', ''
+                        [System.IO.File]::WriteAllText($projReadmePath, ($rText.Trim() + "`n"), $utf8NoBom)
+                    }
+                    $projMetaPath = Join-Path $targetProjectDir "metadata.json"
+                    if (Test-Path $projMetaPath) {
+                        $metaText = Get-Content -Path $projMetaPath -Raw
+                        $metaText = $metaText -replace '(?m)^\s*"MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API",?\r?\n?', ''
+                        [System.IO.File]::WriteAllText($projMetaPath, $metaText, $utf8NoBom)
+                    }
 
                     Write-Host "[OK] Extracted Android project bundle '$($zip.Name)' -> $targetProjectDir"
 

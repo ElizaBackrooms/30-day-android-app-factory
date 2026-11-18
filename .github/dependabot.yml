@@ -9,3 +9,13 @@ updates:
       - "dependencies"
   # Gradle Dependabot block is automatically appended by scripts/publish_to_github.ps1
   # once the first days/*/android_project/build.gradle* project is extracted.
+
+  - package-ecosystem: "gradle"
+    directories:
+      - "/days/*/android_project"
+      - "/days/*/android_project/app"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "security"
+      - "dependencies"

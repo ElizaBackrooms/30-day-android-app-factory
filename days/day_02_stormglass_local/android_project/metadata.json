@@ -1,0 +1,6 @@
+{
+  "name": "StormGlass Local",
+  "description": "Offline-first barometric weather station, Zambretti weather outlook, squall alert, and optional opt-in Open-Meteo station comparison for de-Googled Android devices.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

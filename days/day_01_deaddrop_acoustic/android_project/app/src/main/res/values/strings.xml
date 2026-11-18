@@ -1,0 +1,41 @@
+<resources>
+    <string name="app_name">DeadDrop Acoustic</string>
+    <string name="app_header_title">DEADDROP ACOUSTIC</string>
+    <string name="app_header_spec">Sound &amp; Flashlight Messenger · Works Offline</string>
+
+    <string name="tab_tx">Send</string>
+    <string name="tab_rx">Listen</string>
+    <string name="tab_beacon">Light &amp; Log</string>
+
+    <string name="tx_callsign_label">Your Name or ID (Callsign)</string>
+    <string name="tx_callsign_placeholder">NODE-1</string>
+    <string name="tx_type_label">Message Type</string>
+    <string name="tx_message_label">Your Message</string>
+    <string name="tx_message_placeholder">Type a short message…</string>
+    <string name="tx_coords_label">Location (Optional)</string>
+    <string name="tx_coords_placeholder">e.g. 41.8818,-87.6231</string>
+    <string name="tx_attach_gps">Add My GPS</string>
+    <string name="tx_fetching_gps">Finding GPS…</string>
+    <string name="tx_transmit_button">Play Sound Message</string>
+    <string name="tx_stop_button">Stop Sound</string>
+    <string name="tx_loopback_button">Test Sound Check (Offline Self-Test)</string>
+
+    <string name="rx_permission_title">Microphone Permission Needed</string>
+    <string name="rx_permission_desc">Used ONLY while you press Start Listening so the app can hear tone beeps and turn them back into text. Audio is never saved or uploaded.</string>
+    <string name="rx_permission_grant">Allow Microphone</string>
+    <string name="rx_arm_listener">Start Listening for Sound</string>
+    <string name="rx_disarm_listener">Stop Listening</string>
+    <string name="rx_empty_title">No Messages Heard Yet</string>
+    <string name="rx_empty_hint">Hold the other phone speaker close to this mic and tap Start Listening, or run Test Sound Check on the Send tab.</string>
+
+    <string name="beacon_title">Flashlight Morse Beacon</string>
+    <string name="beacon_message_label">Words to Flash (A-Z, 0-9)</string>
+    <string name="beacon_start">Start Flashing Light</string>
+    <string name="beacon_stop">Stop Flashing</string>
+    <string name="beacon_loop_label">Repeat Forever Until Stopped</string>
+
+    <string name="log_title">Activity Log</string>
+    <string name="log_copy">Copy</string>
+    <string name="log_clear">Wipe All Local Data</string>
+    <string name="log_empty">No messages or light signals recorded yet.</string>
+</resources>
