@@ -13,7 +13,7 @@ An open-source collection of **30 daily native Kotlin + Jetpack Compose Android 
 ## How Apps Are Built & Distributed
 
 Every app from **Day 3 onward** is engineered with:
-- **Native Kotlin + Jetpack Compose (Material 3):** Clean single-module architecture targeting Android 8.0+ (`targetSdk = 36` / Android 16) with `enableEdgeToEdge()`, adaptive layouts, and zero Google Play Services (GMS) bloat.
+- **Native Kotlin + Jetpack Compose (Material 3):** Clean single-module architecture targeting **Moto G Stylus 2023 (LineageOS / AOSP, `minSdk = 26`, zero GMS)** and **Google Play Store (`targetSdk = 36` / Android 16)** with `enableEdgeToEdge()`, adaptive layouts, and zero Google Play Services (GMS) bloat.
 - **Online-Enhanced + Offline-Resilient:** Uses free, keyless public APIs and user-configured HTTPS webhooks via `HttpsURLConnection` + Coroutines (`Dispatchers.IO`), backed by `SharedPreferences` caching for full offline capability.
 - **Security-First Design:** Strict HTTPS-only networking (`usesCleartextTraffic="false"`), SSRF-safe webhook validation, bounded input parsing for BLE/NFC/AFSK/JSON payloads, and `SecureRandom` user-scoped tokens. See [SECURITY.md](SECURITY.md) for full details.
 

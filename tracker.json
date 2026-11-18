@@ -3,7 +3,7 @@
   "project_root": ".",
   "github_repo": "https://github.com/ElizaBackrooms/30-day-android-app-factory",
   "target_builder": "Google AI Studio Web Browser (Build -> Android / Kotlin Jetpack Compose)",
-  "target_device": "Android 8.0+ / Google Play Store & Moto G Stylus (Zero GMS bloat, Play Store Compliant)",
+  "target_device": "Moto G Stylus 2023 (LineageOS / AOSP, zero GMS, minSdk 26) & Google Play Store (Android 16 targetSdk 36)",
   "distribution_policy": "Google Play Store Ready (unique io.github.elizabackrooms.<slug> packageId, targetSdk 36 / Android 16 Play compliance, enableEdgeToEdge, adaptive layouts, runtime permission rationale UI, Privacy Policy URL + in-app Data Safety disclosure, play_store_listing.md, and AI Studio ZIP export)",
   "connectivity_policy": "Privacy-by-Default Opt-In Online (android.permission.INTERNET + free keyless public REST APIs via HttpsURLConnection/Coroutines; stateless & offline by default until user opts in to save or sync)",
   "security_policy": "Zero PII/secrets/device-IDs/analytics; mandatory pre-upload Security Overseer subagent audit + SHA-256 SECURITY_REVIEW.md sign-off; HTTPS-only TLS (usesCleartextTraffic=false, instanceFollowRedirects=false, 10s timeouts), DNS-checked SSRF blocklist, strict input bounds (BLE/NFC/AFSK/JSON), SecureRandom per-user tokens + Keystore AES-GCM, exported=false internal components, allowBackup=false",

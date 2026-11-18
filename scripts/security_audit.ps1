@@ -48,7 +48,7 @@ $cleartextHttpUrlRegex = 'http://(?!(schemas\.android\.com/|www\.w3\.org/|ns\.ad
 $exportedServiceRegex = '<(service|receiver|provider)\b[^>]*android:exported\s*=\s*"true"'
 $orientationLockRegex = 'android:screenOrientation\s*='
 $privacyTrackingRegex = '(Settings\.Secure\.ANDROID_ID|AdvertisingIdClient|getImei\s*\(|getDeviceId\s*\(|getMacAddress\s*\(|Build\.SERIAL|Build\.getSerial\s*\()'
-$analyticsSdkRegex = '(firebase-analytics|play-services-ads|play-services-measurement|com\.mixpanel|com\.amplitude|com\.appsflyer|io\.branch\.sdk|facebook-android-sdk)'
+$analyticsSdkRegex = '(firebase-analytics|play-services-ads|play-services-measurement|com\.google\.android\.gms|play-services-|com\.google\.firebase|com\.mixpanel|com\.amplitude|com\.appsflyer|io\.branch\.sdk|facebook-android-sdk)'
 $usernameRegex = if ($env:USERNAME -and $env:USERNAME.Length -ge 3) { "(?<![A-Za-z0-9_])$([regex]::Escape($env:USERNAME))(?![A-Za-z0-9_])" } else { "" }
 
 $violations = New-Object System.Collections.Generic.List[string]
