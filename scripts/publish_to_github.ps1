@@ -1,10 +1,19 @@
 param(
     [string]$DayFolder = "",
     [string]$CommitMessage = "",
-    [switch]$ExtractOnly
+    [switch]$ExtractOnly,
+    [switch]$OpenAiStudio
 )
 
 $ErrorActionPreference = "Stop"
+
+if ($OpenAiStudio) {
+    $aiStudioHome = "https://aistudio." + "google.com/apps"
+    Start-Process $aiStudioHome
+    Start-Sleep -Seconds 4
+    Write-Host "[OK] Opened Google AI Studio in default browser."
+    exit 0
+}
 
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $RepoRoot
@@ -184,6 +193,13 @@ if ($ResolvedDayFolder -and (Test-Path $ResolvedDayFolder)) {
                     if (Test-Path $appGradlePath) {
                         $gText = Get-Content -Path $appGradlePath -Raw
                         $gText = $gText -replace 'applicationId\s*=\s*"com\.(aistudio|example)[^"]*"', "applicationId = `"io.github.elizabackrooms.$appIdSlug`""
+                        $gText = $gText -replace 'minSdk\s*=\s*2[1-5]\b', 'minSdk = 26'
+                        if ($gText -match 'compose\s*=\s*true' -and $gText -notmatch 'buildConfig\s*=\s*true') {
+                            $gText = $gText -replace 'compose\s*=\s*true', "compose = true`n    buildConfig = true"
+                        }
+                        if ($gText -match 'testImplementation\(libs\.robolectric\)' -and $gText -notmatch 'androidTestImplementation\(libs\.androidx\.junit\)') {
+                            $gText = $gText -replace 'testImplementation\(libs\.robolectric\)', "testImplementation(libs.robolectric)`n  androidTestImplementation(platform(libs.androidx.compose.bom))`n  androidTestImplementation(libs.androidx.compose.ui.test.junit4)`n  androidTestImplementation(libs.androidx.espresso.core)`n  androidTestImplementation(libs.androidx.junit)`n  androidTestImplementation(libs.androidx.runner)"
+                        }
                         $gText = $gText -replace '(?m)^\s*//\s*implementation\([^\r\n]*(firebase|play\.services|credentials\.play\.services)[^\r\n]*\)\r?\n?', ''
                         $gText = $gText -replace 'signingConfig\s*=\s*signingConfigs\.getByName\("debugConfig"\)', 'if (file("${rootDir}/debug.keystore").exists()) { signingConfig = signingConfigs.getByName("debugConfig") }'
                         $gText = $gText -replace 'signingConfig\s*=\s*signingConfigs\.getByName\("release"\)', 'if (file(System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks").exists()) { signingConfig = signingConfigs.getByName("release") }'
@@ -231,6 +247,38 @@ if ($ResolvedDayFolder -and (Test-Path $ResolvedDayFolder)) {
                         $metaText = Get-Content -Path $projMetaPath -Raw
                         $metaText = $metaText -replace '(?m)^\s*"MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API",?\r?\n?', ''
                         [System.IO.File]::WriteAllText($projMetaPath, $metaText, $utf8NoBom)
+                    }
+
+                    # Harden data_extraction_rules.xml, backup_rules.xml, and Robolectric SDK 35 Java 17 compatibility automatically
+                    $extractRulesPath = Join-Path $targetProjectDir "app\src\main\res\xml\data_extraction_rules.xml"
+                    if (Test-Path (Split-Path -Parent $extractRulesPath)) {
+                        $extractRulesXml = "<?xml version=`"1.0`" encoding=`"utf-8`"?>`n<data-extraction-rules>`n    <cloud-backup>`n        <exclude domain=`"sharedpref`" path=`".`" />`n        <exclude domain=`"database`" path=`".`" />`n        <exclude domain=`"file`" path=`".`" />`n    </cloud-backup>`n    <device-transfer>`n        <exclude domain=`"sharedpref`" path=`".`" />`n        <exclude domain=`"database`" path=`".`" />`n        <exclude domain=`"file`" path=`".`" />`n    </device-transfer>`n</data-extraction-rules>`n"
+                        [System.IO.File]::WriteAllText($extractRulesPath, $extractRulesXml, $utf8NoBom)
+                    }
+                    $backupRulesPath = Join-Path $targetProjectDir "app\src\main\res\xml\backup_rules.xml"
+                    if (Test-Path (Split-Path -Parent $backupRulesPath)) {
+                        $backupRulesXml = "<?xml version=`"1.0`" encoding=`"utf-8`"?>`n<full-backup-content>`n    <exclude domain=`"sharedpref`" path=`".`" />`n    <exclude domain=`"database`" path=`".`" />`n    <exclude domain=`"file`" path=`".`" />`n</full-backup-content>`n"
+                        [System.IO.File]::WriteAllText($backupRulesPath, $backupRulesXml, $utf8NoBom)
+                    }
+                    Get-ChildItem -Path (Join-Path $targetProjectDir "app\src\test") -Recurse -Filter "*.kt" -ErrorAction SilentlyContinue |
+                        ForEach-Object {
+                            $tRaw = Get-Content -Path $_.FullName -Raw -ErrorAction SilentlyContinue
+                            if ($null -ne $tRaw -and $tRaw -match '@Config\(sdk\s*=\s*\[36\]\)') {
+                                $tClean = $tRaw -replace '@Config\(sdk\s*=\s*\[36\]\)', '@Config(sdk = [35])'
+                                [System.IO.File]::WriteAllText($_.FullName, $tClean, $utf8NoBom)
+                            }
+                        }
+
+                    # Copy source zip to attached microSD card (/storage/7485-1F18) if USB phone is connected
+                    $adbExe = Join-Path $env:LOCALAPPDATA "Android\Sdk\platform-tools\adb.exe"
+                    if (Test-Path $adbExe) {
+                        try {
+                            $devOut = (& $adbExe devices 2>$null) -join "`n"
+                            if ($devOut -match '\bdevice\b') {
+                                & $adbExe shell mkdir -p /storage/7485-1F18/AndroidApps 2>$null | Out-Null
+                                & $adbExe push $zip.FullName "/storage/7485-1F18/AndroidApps/$($dayLeaf)-source.zip" 2>$null | Out-Null
+                            }
+                        } catch {}
                     }
 
                     Write-Host "[OK] Extracted Android project bundle '$($zip.Name)' -> $targetProjectDir"
