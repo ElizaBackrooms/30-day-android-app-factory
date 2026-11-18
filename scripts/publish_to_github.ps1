@@ -168,6 +168,16 @@ if ($ResolvedDayFolder -and (Test-Path $ResolvedDayFolder)) {
                         }
 
                     Write-Host "[OK] Extracted Android project bundle '$($zip.Name)' -> $targetProjectDir"
+
+                    # Ensure Dependabot watches Gradle projects once at least one android_project exists
+                    $dependabotFile = Join-Path $RepoRoot ".github\dependabot.yml"
+                    if (Test-Path $dependabotFile) {
+                        $dbRaw = Get-Content -Path $dependabotFile -Raw
+                        if ($dbRaw -notmatch 'package-ecosystem:\s*"gradle"') {
+                            $gradleBlock = "`n  - package-ecosystem: `"gradle`"`n    directories:`n      - `"/days/*/android_project`"`n      - `"/days/*/android_project/app`"`n    schedule:`n      interval: `"weekly`"`n    labels:`n      - `"security`"`n      - `"dependencies`"`n"
+                            [System.IO.File]::WriteAllText($dependabotFile, ($dbRaw.TrimEnd() + "`n" + $gradleBlock), $utf8NoBom)
+                        }
+                    }
                 } finally {
                     if (Test-Path $tempExtractDir) {
                         Remove-Item -Path $tempExtractDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -205,7 +215,7 @@ if (Get-Command gh -ErrorAction SilentlyContinue) {
 if ($DayFolder -ne "") {
     $pathsToStage = New-Object System.Collections.Generic.List[string]
     $pathsToStage.Add($DayFolder)
-    foreach ($metaFile in @("tracker.json", "SECURITY_AUDIT_LOG.md")) {
+    foreach ($metaFile in @("tracker.json", "SECURITY_AUDIT_LOG.md", ".github/dependabot.yml")) {
         if (Test-Path (Join-Path $RepoRoot $metaFile)) {
             $pathsToStage.Add($metaFile)
         }
