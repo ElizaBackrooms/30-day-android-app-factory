@@ -76,6 +76,10 @@ jobs:
               echo "::error::${manifest} must not export non-launcher service/receiver/provider components!"
               FAIL=1
             fi
+            if grep -q 'android:screenOrientation=' "$manifest"; then
+              echo "::error::${manifest} must not lock android:screenOrientation (Android 16 targetSdk 36 requires adaptive layouts)!"
+              FAIL=1
+            fi
           done < <(find days -path 'days/*/android_project/**/AndroidManifest.xml' -print0 2>/dev/null || true)
 
           # 4. Scan Android source files for insecure TLS bypasses, open sockets, cleartext HTTP, or exec sinks
@@ -146,6 +150,14 @@ jobs:
       - name: Setup Gradle
         if: steps.discover.outputs.has_projects == 'true'
         uses: gradle/actions/setup-gradle@v4
+
+      - name: Accept Android SDK Licenses
+        if: steps.discover.outputs.has_projects == 'true'
+        shell: bash
+        run: |
+          if [ -n "${ANDROID_HOME:-}" ] && [ -x "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" ]; then
+            yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
+          fi
 
       - name: Build Debug APKs
         if: steps.discover.outputs.has_projects == 'true'

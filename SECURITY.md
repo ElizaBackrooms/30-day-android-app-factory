@@ -43,7 +43,8 @@ Because these apps are downloadable and may connect to public APIs, user-configu
 5. **Zero Hardcoded Shared Secrets & Hardened Component/Storage Config**
    - Never hardcode API keys, shared secret tokens, or shared public webhook channels/topics in source code.
    - Generate per-user webhook topics or pairing tokens locally via `java.security.SecureRandom` (>= 128 bits of entropy) only when the user enables that feature. Encrypt sensitive secrets/passphrases at rest via Android Keystore (`AES/GCM/NoPadding` wrapping) inside `Context.MODE_PRIVATE` storage, and never log tokens, seeds, or webhook URLs to `android.util.Log`.
-   - Set `android:allowBackup="false"`, `android:dataExtractionRules` (API 31+), `android:exported="false"` on all non-launcher components (services, receivers, providers), `PendingIntent.FLAG_IMMUTABLE` on all `PendingIntent` instances, and `WindowManager.LayoutParams.FLAG_SECURE` on screens displaying sensitive keys or seeds.
+   - Set `android:allowBackup="false"`, `android:dataExtractionRules` (API 31+), `android:exported="false"` on all non-launcher components (services, receivers, providers), `PendingIntent.FLAG_IMMUTABLE` on all `PendingIntent` instances, and `WindowManager.LayoutParams.FLAG_SECURE` on screens displaying sensitive keys or seeds. Avoid locking `android:screenOrientation` on `<activity>` to maintain Android 16 (`targetSdk = 36`) large-screen adaptive compliance.
+   - Include `enableEdgeToEdge()` with safe `Scaffold` `WindowInsets` and link the hosted Privacy Policy (`https://github.com/ElizaBackrooms/30-day-android-app-factory/blob/main/PRIVACY_POLICY.md`) in the **Field Guide & Privacy** tab.
 
 6. **Graceful Permissions & Hardware Fallbacks**
    - Every sensitive permission (`CAMERA`, `RECORD_AUDIO`, `ACCESS_FINE_LOCATION`, `BLUETOOTH_SCAN`, `NFC`) must display an in-app rationale before prompting and degrade cleanly without crashing if denied or if hardware sensors are absent.

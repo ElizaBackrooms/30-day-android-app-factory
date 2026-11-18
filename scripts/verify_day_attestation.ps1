@@ -1,4 +1,4 @@
-﻿param(
+param(
     [Parameter(Mandatory = $true)]
     [ValidateSet("Write", "Verify")]
     [string]$Action,
@@ -113,7 +113,7 @@ if ($Action -eq "Write") {
     $cleanSummary = ($Summary -replace '\r?\n', ' ').Trim()
 
     $reviewLines = @(
-        "# Security Overseer Sign-Off — $dayLeaf",
+        "# Security Overseer Sign-Off - $dayLeaf",
         "",
         "- **Day:** ``$dayLeaf``",
         "- **Reviewer:** ``security-overseer``",

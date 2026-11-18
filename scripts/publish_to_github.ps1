@@ -193,7 +193,7 @@ if ($ResolvedDayFolder -and (Test-Path $ResolvedDayFolder)) {
 # 3. Run shared Security & OpSec Audit Gate
 $auditScript = Join-Path $PSScriptRoot "security_audit.ps1"
 & $auditScript
-if ($LASTEXITCODE -ne 0) {
+if (-not $? -or $LASTEXITCODE -ne 0) {
     exit 1
 }
 
@@ -209,7 +209,7 @@ if ($DayFolder -ne "") {
 } else {
     & $attestationScript -Action Verify
 }
-if ($LASTEXITCODE -ne 0) {
+if (-not $? -or $LASTEXITCODE -ne 0) {
     exit 1
 }
 

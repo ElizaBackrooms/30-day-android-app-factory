@@ -11,11 +11,11 @@ Every agent, subagent, and scheduled automation operating in this workspace **mu
 2. **Prompt & Architecture Review (Before Building):**
    - Before submitting any `google_ai_studio_prompt.txt` to Google AI Studio, define and invoke a dedicated **`security-overseer`** subagent (`define_subagent` + `invoke_subagent`) to audit the prompt and `play_store_listing.md` against [SECURITY.md](SECURITY.md):
      - Package ID uses `io.github.elizabackrooms.<slug>` (never `com.example` or personal usernames).
-     - `android:usesCleartextTraffic="false"`, `android:allowBackup="false"`, and `android:exported="false"` on all non-launcher components.
+     - Android 16 (`targetSdk = 36`) Play Console readiness: `enableEdgeToEdge()`, `Scaffold` `innerPadding` / `WindowInsets`, adaptive large-screen layouts (no `android:screenOrientation` lock), `android:usesCleartextTraffic="false"`, `android:allowBackup="false"`, `android:exported="false"` on all non-launcher components, and `neverForLocation` on `BLUETOOTH_SCAN` when not deriving physical location.
      - Network calls use `HttpsURLConnection` (`https://` only) with `10_000 ms` timeouts, `instanceFollowRedirects = false`, and default strict TLS certificate/hostname verification.
      - Any user-configurable webhook enforces an SSRF blocklist resolving `InetAddress.getAllByName` and rejecting `localhost`, `.local`, `.internal`, unspecified (`0.0.0.0/8`, `::`), loopback (`127.0.0.0/8`, `::1`), private RFC-1918 (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`), CGNAT (`100.64.0.0/10`), link-local (`169.254.0.0/16`, `fe80::/10`), unique-local IPv6 (`fc00::/7`), IPv4-mapped IPv6 (`::ffff:0:0/96`), and multicast targets.
      - Zero open listening sockets (`ServerSocket`, `DatagramSocket`, `LocalServerSocket`), zero hardcoded shared API keys/topics, `SecureRandom` (>=128-bit) per-user tokens stored in `MODE_PRIVATE` (wrapped with Android Keystore AES-GCM for sensitive credentials), `PendingIntent.FLAG_IMMUTABLE`, `FLAG_SECURE` on sensitive seed/token views, zero token logging, and strict length/allowlist validation for BLE, NFC, AFSK, barcode, and JSON inputs.
-     - Accurate Google Play Data Safety declarations and runtime permission rationale UI.
+     - Accurate Google Play Data Safety declarations, live Privacy Policy URL (`https://github.com/ElizaBackrooms/30-day-android-app-factory/blob/main/PRIVACY_POLICY.md`) linked both in-app and in `play_store_listing.md`, and runtime permission rationale UI.
 
 3. **Pre-Upload Code Review & Cryptographic Sign-Off (Before Publishing to GitHub):**
    - First extract downloaded bundles locally without pushing (`scripts/publish_to_github.ps1 -DayFolder days/day_NN_<slug> -ExtractOnly`).

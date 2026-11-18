@@ -77,6 +77,13 @@ jobs:
           languages: java-kotlin
           build-mode: manual
 
+      - name: Accept Android SDK Licenses
+        shell: bash
+        run: |
+          if [ -n "${ANDROID_HOME:-}" ] && [ -x "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" ]; then
+            yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
+          fi
+
       - name: Build Android Projects for CodeQL Extraction
         shell: bash
         run: |

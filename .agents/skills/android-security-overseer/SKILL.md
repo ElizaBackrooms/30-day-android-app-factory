@@ -44,6 +44,6 @@ Inspect `days/day_NN_<slug>/google_ai_studio_prompt.txt`, `play_store_listing.md
 5. **Component & Storage Hardening:**
    - `android:allowBackup="false"` and `android:exported="false"` on all non-launcher components.
    - Per-user topics/tokens generated via `java.security.SecureRandom` (>= 16 bytes) and stored in `Context.MODE_PRIVATE` (wrapped with Android Keystore AES-GCM for sensitive credentials/seeds), with zero `Log` leakage, `PendingIntent.FLAG_IMMUTABLE`, and `FLAG_SECURE` on sensitive views.
-6. **OpSec & Play Store Compliance:**
+6. **OpSec & Play Store Compliance (2026 Android 16 Standard):**
    - Zero OS usernames, local home directory paths, private studio URLs, or keystores in tracked files.
-   - `applicationId` matches `io.github.elizabackrooms.<slug>`, `targetSdk = 35`, and Data Safety answers in `play_store_listing.md` match actual opt-in permissions/network requests.
+   - `applicationId` matches `io.github.elizabackrooms.<slug>`, `targetSdk = 36` (Android 16 required by Google Play since Aug 31, 2026), `enableEdgeToEdge()` enabled with safe `WindowInsets`, no `android:screenOrientation` locks, Privacy Policy URL (`https://github.com/ElizaBackrooms/30-day-android-app-factory/blob/main/PRIVACY_POLICY.md`) linked inside the app and `play_store_listing.md`, and Data Safety answers match actual opt-in permissions/network requests.

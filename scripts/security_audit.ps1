@@ -46,6 +46,7 @@ $unsafeExecRegex = '(Runtime\.getRuntime\(\)\.exec|ProcessBuilder\s*\(|addJavasc
 $openSocketRegex = '(new\s+ServerSocket\s*\(|ServerSocket\s*\(|ServerSocketChannel\.open|DatagramSocket\s*\(|AsynchronousServerSocketChannel\.open|LocalServerSocket\s*\()'
 $cleartextHttpUrlRegex = 'http://(?!(schemas\.android\.com/|www\.w3\.org/|ns\.adobe\.com/|schemas\.xmlsoap\.org/|apache\.org/|gradle\.org/|maven\.apache\.org/))[^\s"''`>]+'
 $exportedServiceRegex = '<(service|receiver|provider)\b[^>]*android:exported\s*=\s*"true"'
+$orientationLockRegex = 'android:screenOrientation\s*='
 $privacyTrackingRegex = '(Settings\.Secure\.ANDROID_ID|AdvertisingIdClient|getImei\s*\(|getDeviceId\s*\(|getMacAddress\s*\(|Build\.SERIAL|Build\.getSerial\s*\()'
 $analyticsSdkRegex = '(firebase-analytics|play-services-ads|play-services-measurement|com\.mixpanel|com\.amplitude|com\.appsflyer|io\.branch\.sdk|facebook-android-sdk)'
 $usernameRegex = if ($env:USERNAME -and $env:USERNAME.Length -ge 3) { "(?<![A-Za-z0-9_])$([regex]::Escape($env:USERNAME))(?![A-Za-z0-9_])" } else { "" }
@@ -149,6 +150,9 @@ foreach ($relPath in $candidateFiles) {
         }
         if ($fullText -match $exportedServiceRegex) {
             $violations.Add("${normalizedRel}: Non-launcher service/receiver/provider sets android:exported=`"true`".")
+        }
+        if ($fullText -match $orientationLockRegex) {
+            $violations.Add("${normalizedRel}: Avoid hardcoded android:screenOrientation locks (Android 16 targetSdk 36 requires adaptive screen support).")
         }
     }
 }
