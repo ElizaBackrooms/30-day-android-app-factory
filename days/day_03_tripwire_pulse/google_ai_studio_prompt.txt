@@ -1,0 +1,31 @@
+Build a complete, production-ready, offline-first Android app in Kotlin + Jetpack Compose (Material 3) named "Tripwire Pulse" with package / applicationId "io.github.elizabackrooms.tripwirepulse" (minSdk = 26, targetSdk = 36).
+
+1. CORE HARDWARE / LOCAL CAPABILITY (WORKS 100% OFFLINE):
+- Category: Perimeter Sentry
+- Hardware & Local Engine: 3-axis accelerometer geophone (`TYPE_LINEAR_ACCELERATION`) + mic dB gate + live Compose seismograph
+- Must run 100% natively on a Moto G Stylus 5G (2023) running de-Googled LineageOS 24.0 (zero Google Play Services, zero Firebase, zero third-party analytics/ad SDKs).
+- Use only standard AOSP APIs and mark all optional <uses-feature> tags in AndroidManifest.xml with android:required="false". Include a built-in 1-tap Demo / Simulation mode so every feature can be tested immediately even if hardware or signal is idle.
+- Request only the runtime permissions actually needed (`RECORD_AUDIO` for the optional mic decibel gate, and `POST_NOTIFICATIONS` on Android 13+ if using alert notifications) with graceful denial fallback; do NOT request unused permissions (no Camera, Location, or BLE).
+
+2. OPTIONAL LIVE ONLINE FEATURE (OPT-IN ONLY, OFF BY DEFAULT):
+- Online Integration: Live Ntfy.sh / Discord / custom HTTPS webhook push alert over Wi-Fi/cellular on intrusion trigger + encrypted alert payload log
+- Use javax.net.ssl.HttpsURLConnection on Dispatchers.IO + org.json (https:// only, connectTimeout = 10_000, readTimeout = 10_000, instanceFollowRedirects = false, useCaches = false, 64 KB response cap). Never implement custom X509TrustManager or HostnameVerifier bypasses.
+- Never open inbound listening sockets (zero ServerSocket, DatagramSocket, LocalServerSocket, or AsynchronousServerSocketChannel).
+- Any user-configurable webhook/URL must parse via java.net.URI (https:// only), enforce strict length/character-allowlist validation on URLs and alert payloads, resolve InetAddress.getAllByName, and reject localhost, .local, .internal, 0.0.0.0/8, :: (unspecified IPv6), 127.0.0.0/8, ::1, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 100.64.0.0/10, 169.254.0.0/16, fc00::/7, fe80::/10, ::ffff:0:0/96, and multicast IPs.
+- Never make any automatic network call on startup; require an explicit Opt-In toggle (default false) and an explicit user action button.
+
+3. PLAIN-ENGLISH ("NORMIE-FRIENDLY") UI & ADAPTIVE LAYOUT:
+- Call enableEdgeToEdge() in MainActivity and consume WindowInsets.safeDrawing in Scaffold.
+- Never lock android:screenOrientation in AndroidManifest.xml.
+- Use simple, everyday plain-English labels on all tabs, buttons, meters, and settings (put technical acronyms in parentheses, add a 1-line plain-English subtitle under each section explaining what it does, and include a beginner "Help & Privacy" tab).
+
+4. PRIVACY BY DEFAULT & SECURITY HARDENING:
+- Operate 100% in-memory by default. Gate any local persistence behind an explicit "Save History on Phone (Opt-In)" switch defaulting to false.
+- Zero hardcoded API keys, tokens, or shared Ntfy.sh topics. Generate per-user Ntfy.sh topics/tokens using java.security.SecureRandom (>= 16 bytes) only when the user enables it.
+- Store any opted-in encrypted alert payload log and webhook credentials in Context.MODE_PRIVATE wrapped with Android Keystore AES/GCM/NoPadding, set WindowManager.LayoutParams.FLAG_SECURE on screens displaying webhook URLs/tokens, and never log tokens or webhook URLs via android.util.Log.
+- Provide a 1-tap "Wipe All Local Data" button that clears SharedPreferences (prefs.edit().clear().apply()), encrypted log files, and resets all in-memory state.
+- Set android:allowBackup="false", android:usesCleartextTraffic="false", and android:exported="false" on all non-launcher components (services, receivers, providers) in AndroidManifest.xml; exclude sharedpref/database/file in data_extraction_rules.xml and backup_rules.xml. Use PendingIntent.FLAG_IMMUTABLE on any PendingIntent.
+- Prohibit device fingerprinting (no ANDROID_ID, AdvertisingIdClient, IMEI, MAC, Build.SERIAL) and forbid Runtime.exec, ProcessBuilder, WebView JavaScript interfaces, and DexClassLoader.
+- Show a clear in-app rationale dialog before requesting `RECORD_AUDIO` or `POST_NOTIFICATIONS`.
+- Include a clickable button in the Help & Privacy tab that opens the Privacy Policy URL: https://github.com/ElizaBackrooms/30-day-android-app-factory/blob/main/PRIVACY_POLICY.md
+- Include unit tests and Robolectric tests (@Config(sdk = [35])) verifying core seismograph/dB math, SSRF URL validation, and Privacy-by-Default opt-in behavior.

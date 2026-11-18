@@ -1,0 +1,57 @@
+<resources>
+    <string name="app_name">Tripwire Pulse</string>
+
+    <!-- Navigation Tabs -->
+    <string name="tab_watch">Watch</string>
+    <string name="tab_alerts">Alerts</string>
+    <string name="tab_remote">Online</string>
+    <string name="tab_help_privacy">Help &amp; Privacy</string>
+
+    <!-- Watch / Sentry Console -->
+    <string name="sentry_status_armed">Perimeter Armed</string>
+    <string name="sentry_status_standby">Sentry on Standby</string>
+    <string name="sentry_status_triggered">Movement Detected</string>
+    <string name="action_arm_sentry">Arm Sentry</string>
+    <string name="action_disarm_sentry">Disarm Sentry</string>
+    <string name="action_clear_alarm">Silence Alarm</string>
+    <string name="section_seismograph_title">Live Shake Graph (Seismograph)</string>
+    <string name="section_seismograph_subtitle">Watches tiny vibrations through the phone body in real time.</string>
+    <string name="section_demo_title">Test Mode (Demo Signal)</string>
+    <string name="section_demo_subtitle">Try fake footsteps and knocks right away even if your phone is still.</string>
+    <string name="section_controls_title">Trigger Sensitivity (Geophone &amp; Mic Gate)</string>
+    <string name="section_controls_subtitle">Pick how strong a shake or sound must be before sounding an alert.</string>
+
+    <!-- Alerts Log -->
+    <string name="section_alerts_title">Recent Trigger Alerts</string>
+    <string name="section_alerts_subtitle">Events stay in temporary memory unless you opt in to encrypted phone storage.</string>
+    <string name="alerts_empty_title">All quiet on your perimeter</string>
+    <string name="alerts_empty_body">Arm the sentry or turn on Test Mode on the Watch tab to simulate a footstep or door knock.</string>
+
+    <!-- Remote Online Alerts -->
+    <string name="section_remote_title">Online Push Alerts (Opt-In Only)</string>
+    <string name="section_remote_subtitle">Off by default. Sends an alert over Wi-Fi or mobile data only if you turn this on.</string>
+    <string name="remote_screen_protected">Screen capture blocked on this page (FLAG_SECURE) to protect your private alert link.</string>
+    <string name="action_generate_ntfy">Generate Private Ntfy.sh Topic</string>
+    <string name="action_send_test_alert">Send Test Alert Now</string>
+
+    <!-- Help & Privacy -->
+    <string name="section_privacy_title">Privacy &amp; Storage Controls</string>
+    <string name="section_privacy_subtitle">Zero tracking, zero cloud accounts, and nothing saved to disk unless you ask.</string>
+    <string name="toggle_save_history">Save History on Phone (Opt-In)</string>
+    <string name="toggle_save_history_desc">Locks alert logs and your alert link inside encrypted phone storage (Android Keystore AES-GCM).</string>
+    <string name="action_wipe_all_data">Wipe All Local Data</string>
+    <string name="action_open_privacy_policy">Read Privacy Policy</string>
+    <string name="privacy_policy_url">https://github.com/ElizaBackrooms/30-day-android-app-factory/blob/main/PRIVACY_POLICY.md</string>
+
+    <!-- Permission Rationale Dialogs -->
+    <string name="rationale_mic_title">Allow Microphone for Sound Gate?</string>
+    <string name="rationale_mic_body">Tripwire Pulse only measures loudness in decibels (dB) in temporary memory to help confirm real bumps and ignore gentle desk vibrations. Audio is never recorded, saved, or sent anywhere. You can decline and still use the shake sensor offline.</string>
+    <string name="rationale_notif_title">Allow Alert Notifications?</string>
+    <string name="rationale_notif_body">Notifications let Tripwire Pulse show a local alert banner if your phone senses movement while watching a door or bag. You can decline and still see live visual alerts inside the app.</string>
+    <string name="action_continue">Continue</string>
+    <string name="action_not_now">Not Now</string>
+
+    <!-- Notification Channel -->
+    <string name="notification_channel_name">Perimeter Alerts</string>
+    <string name="notification_channel_desc">Local alerts when Tripwire Pulse detects movement or sound above your limit.</string>
+</resources>

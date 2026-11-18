@@ -21,11 +21,11 @@ $slatePath = Join-Path $RepoRoot "30_DAY_SLATE.md"
 $slateLines = Get-Content -Path $slatePath
 $dayRow = $null
 foreach ($line in $slateLines) {
-    if ($line -match "^\|\s*$targetDay\s*\|\s*\*\*([^*]+)\*\*\s*\|\s*([^|]+)\|\s*([^|]+)\|\s*([^|]+)\|") {
+    if ($line -match "^\|\s*$targetDay\s*\|\s*([^|]+)\|\s*\*\*([^*]+)\*\*\s*\|\s*([^|]+)\|\s*([^|]+)\|") {
         $dayRow = [PSCustomObject]@{
             Day      = $targetDay
-            AppName  = $Matches[1].Trim()
-            Category = $Matches[2].Trim()
+            Category = $Matches[1].Trim()
+            AppName  = $Matches[2].Trim()
             Hardware = $Matches[3].Trim()
             Online   = $Matches[4].Trim()
         }

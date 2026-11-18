@@ -1,0 +1,6 @@
+{
+  "name": "Tripwire Pulse",
+  "description": "Offline-first perimeter sentry with a 3-axis accelerometer geophone, live seismograph, optional mic sound gate, and opt-in encrypted HTTPS webhook alerts.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
