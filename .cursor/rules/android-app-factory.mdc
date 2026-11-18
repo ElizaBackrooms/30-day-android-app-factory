@@ -1,0 +1,41 @@
+---
+description: 30-Day Android App Factory rules for Cursor + Google AI Studio Chrome workflow
+globs: "**/*"
+alwaysApply: true
+---
+
+# 30-Day Android App Factory — Cursor & Google AI Studio Workflow
+
+When working in this repository inside **Cursor** (especially when conserving AI credits by generating Android projects in **Google AI Studio Chrome** at `https://aistudio.google.com/apps`):
+
+## 1. Quick 2-Step Workflow (Zero / Low Credit Mode)
+
+- **Step 1 — Prepare Today's Prompt & Open Google AI Studio Chrome:**
+  Run in terminal (or via `Ctrl+Shift+P` -> `Tasks: Run Task`):
+  ```powershell
+  powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run_day_helper.ps1 -Action Prepare
+  ```
+  - This reads `tracker.json` (`current_day`) and `30_DAY_SLATE.md`, generates `days/day_NN_<slug>/day_NN_plan.md`, `play_store_listing.md`, and `google_ai_studio_prompt.txt` (if not already customized), **copies the prompt to your Windows clipboard**, and opens `https://aistudio.google.com/apps` in Chrome.
+  - If using Cursor Agent to customize the prompt first, edit `days/day_NN_<slug>/google_ai_studio_prompt.txt`, then run the command above to copy it to the clipboard and open Chrome.
+
+- **Step 2 — In Google AI Studio Chrome (`https://aistudio.google.com/apps`):**
+  1. Click **Build an Android app**, press **`Ctrl+V`** to paste the prompt, and submit.
+  2. Wait for Google AI Studio to finish generating and compiling the preview.
+  3. Switch the top toggle from **Preview** to **Code**, click **Export options**, and click **Download as .zip file**.
+
+- **Step 3 — Ingest ZIP, Harden, Build APK, Copy to MicroSD & Push to GitHub:**
+  Run in terminal (or via `Ctrl+Shift+P` -> `Tasks: Run Task`):
+  ```powershell
+  powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run_day_helper.ps1 -Action Finish
+  ```
+  - Automatically extracts the newest `.zip` from `Downloads` into `days/day_NN_<slug>/android_project/`, applies all LineageOS/Play Store/Privacy hardening, runs `scripts/security_audit.ps1`, compiles the debug `.apk` + runs unit tests with local Gradle `9.3.1`, copies the `.apk` and `.zip` to the attached **Moto G Stylus 5G (2023)** microSD card (`/storage/7485-1F18`), signs `SECURITY_REVIEW.md` (SHA-256), advances `tracker.json`, and pushes to GitHub.
+
+## 2. Mandatory Guardrails (See `AGENTS.md` & `SECURITY.md`)
+1. **Moto G Stylus 5G (2023) / LineageOS 24.0 (`genevn`, Android 17, Zero GMS) Hard Gate:**
+   - Never use `com.google.android.gms`, `play-services-*`, Firebase SDKs, root, or missing hardware sensors.
+   - Always set `minSdk = 26`, `targetSdk = 36`, `android:required="false"` on optional `<uses-feature>` tags, and no `android:screenOrientation` lock.
+2. **Plain-English ("Normie-Friendly") UI + Online & Offline:**
+   - Use everyday English labels on all tabs, buttons, and meters, with 1-line helper subtitles and a beginner **Help / How to Use** tab.
+   - Include optional opt-in online features via `HttpsURLConnection` (`connectTimeout = 10_000`, `readTimeout = 10_000`, `instanceFollowRedirects = false`, strict SSRF IP blocklist) with 100% offline fallback.
+3. **Privacy by Default (Opt-In Only):**
+   - Keep apps stateless/in-memory by default (`persist_history_opt_in_v1 = false` until user flips an explicit opt-in switch), include a 1-tap **Wipe All Local Data** button, and link `https://github.com/ElizaBackrooms/30-day-android-app-factory/blob/main/PRIVACY_POLICY.md`.
